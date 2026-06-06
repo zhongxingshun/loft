@@ -97,7 +97,11 @@
     <div class="banner" id="banner">⚠️ 无法连接后端 API，正在显示演示数据。请确认 RelayHub 服务已启动并通过 SSH 隧道访问。</div>
     <div class="stats" id="stats"></div>
     <div class="tablewrap">
-      <div class="hd"><strong>客户 / 线路</strong><input class="search" id="search" placeholder="搜索客户名 / IP…" oninput="render()"></div>
+      <div class="hd"><strong>客户 / 线路</strong>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="rowbtn" id="hbtn" onclick="checkHealth()">🩺 检测线路</button>
+          <input class="search" id="search" placeholder="搜索客户名 / IP…" oninput="render()">
+        </div></div>
       <table><thead><tr>
         <th>客户</th><th>decode 出口</th><th>线路状态</th><th>已用 / 上限</th><th>到期</th><th>订阅</th><th></th>
       </tr></thead><tbody id="tbody"></tbody></table>
@@ -141,6 +145,7 @@
 const API = location.origin.startsWith("http") ? "" : "";  // 同源
 let DEMO = false;
 let customers = [];
+let healthMap = {};   // name -> {ok, latency_ms, exit_ip, error}
 
 const demoCustomers = [
   {name:"zhang",exit:"1.2.3.4:8080",status:"ok",used_gb:43,limit_gb:100,expire:"23 天"},
@@ -189,15 +194,36 @@ function render(){
   tb.innerHTML = rows.map(c=>{
     const pct = c.limit_gb ? Math.min(100, Math.round(c.used_gb/c.limit_gb*100)) : 0;
     const lim = c.limit_gb ? `${c.used_gb} / ${c.limit_gb} GB` : `${c.used_gb} GB / 不限`;
+    const h = healthMap[c.name];
+    const st = h ? (h.ok ? "ok" : "bad") : c.status;            // 实测优先于推断
+    const lat = h && h.ok && h.latency_ms!=null ? ` <span class="mono" style="font-size:11px">· ${h.latency_ms}ms</span>` : "";
+    const exitTitle = h && h.exit_ip ? ` title="出口IP: ${h.exit_ip}"` : (h && h.error ? ` title="${h.error}"` : "");
     return `<tr>
       <td><b>${c.name}</b></td>
-      <td class="mono">${c.exit}</td>
-      <td><span class="tag ${c.status}"><span class="dot2"></span>${label[c.status]||c.status}</span></td>
+      <td class="mono"${exitTitle}>${c.exit}</td>
+      <td><span class="tag ${st}"><span class="dot2"></span>${label[st]||st}${lat}</span></td>
       <td>${lim}<div class="bar"><i style="width:${pct}%"></i></div></td>
       <td>${c.expire}</td>
       <td><button class="rowbtn" onclick="rotate('${c.name}')">🔄 订阅</button></td>
       <td><button class="rowbtn" onclick="removeLine('${c.name}')">🗑</button></td>
     </tr>`;}).join('');
+}
+
+async function checkHealth(){
+  const b=document.getElementById('hbtn'); b.disabled=true; b.innerHTML='<span class="spin"></span> 检测中…';
+  try{
+    let results;
+    if(DEMO){ await new Promise(r=>setTimeout(r,600));
+      results = customers.map(c=>({name:c.name, ok:c.status!=='bad',
+        latency_ms: c.status==='bad'?null:Math.floor(80+Math.random()*200),
+        exit_ip: c.status==='bad'?null:('203.0.113.'+Math.floor(Math.random()*254))})); }
+    else { results = await api('/api/health'); }
+    healthMap={}; results.forEach(r=>healthMap[r.name]=r);
+    render();
+    const bad = results.filter(r=>!r.ok).length;
+    toast(bad ? `检测完成：${bad} 条线路异常` : '检测完成：全部正常');
+  }catch(e){ toast('检测失败：'+e.message); }
+  finally{ b.disabled=false; b.textContent='🩺 检测线路'; }
 }
 
 const mask=document.getElementById('mask');

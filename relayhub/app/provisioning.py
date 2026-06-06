@@ -82,6 +82,25 @@ class ProvisioningService:
         exits = self._exit_map(self.client.get_core_config())
         return [self._to_view(u, exits) for u in users]
 
+    # ---- 健康检查: 从 core 配置抽出各客户 decode 出口 (P5) ----
+    def line_endpoints(self) -> list[tuple[str, SocksEndpoint]]:
+        cfg = self.client.get_core_config()
+        out: list[tuple[str, SocksEndpoint]] = []
+        for o in cfg.get("outbounds", []):
+            tag = o.get("tag", "")
+            if not tag.startswith("out-"):
+                continue
+            srv = (o.get("settings", {}).get("servers") or [{}])[0]
+            users = srv.get("users") or [{}]
+            ep = SocksEndpoint(
+                address=srv.get("address", ""),
+                port=int(srv.get("port", 0)),
+                user=users[0].get("user"),
+                password=users[0].get("pass"),
+            )
+            out.append((tag[len("out-"):], ep))
+        return out
+
     # ---- 内部 ----
     def _user_body(self, spec: LineSpec) -> dict:
         proto = self.s.shared_inbound_protocol

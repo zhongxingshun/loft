@@ -43,3 +43,13 @@ class CustomerView(BaseModel):
     used_gb: float
     limit_gb: Optional[float] = None
     expire: str
+
+
+class HealthResult(BaseModel):
+    """单条 decode 线路探活结果 (P5: GET /api/health)。"""
+    name: Optional[str] = None
+    exit: Optional[str] = None
+    ok: bool
+    latency_ms: Optional[int] = None
+    exit_ip: Optional[str] = None      # 经该线路出站看到的公网 IP
+    error: Optional[str] = None

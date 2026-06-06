@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 
 from .config import load_settings
+from .health import HealthChecker
 from .marzban import MarzbanClient, MarzbanError
 from .models import LineSpec
 from .provisioning import ProvisioningService
@@ -19,6 +20,7 @@ app = FastAPI(title="RelayHub", version="0.1.0")
 
 _settings = load_settings()
 _service = ProvisioningService(MarzbanClient(_settings), _settings)
+_checker = HealthChecker()
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -67,6 +69,12 @@ def stats():
         "used_gb": used,
         "expiring": expiring,
     }
+
+
+@app.get("/api/health")
+def health():
+    """对每条 decode 线路做真实探活, 返回延迟与出口 IP (P5)。"""
+    return _checker.check_many(_service.line_endpoints())
 
 
 @app.post("/api/lines/{name}/rotate-sub")
