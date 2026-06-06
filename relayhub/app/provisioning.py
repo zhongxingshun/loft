@@ -58,6 +58,19 @@ class ProvisioningService:
             expire_days=None if spec.days == 0 else spec.days,
         )
 
+    # ---- 初始化: 确保安全护栏就位 (部署 bootstrap 用, 无客户时也生效) ----
+    def ensure_guard(self) -> None:
+        with self._lock:
+            cfg = self.client.get_core_config()
+            cfg.setdefault("outbounds", [])
+            cfg.setdefault("routing", {}).setdefault("rules", [])
+            guard.ensure_blackhole_outbound(cfg["outbounds"])
+            g = guard.block_rules(self.s.local_ip, self.s.block_smtp, self.s.block_bittorrent)
+            others = [r for r in cfg["routing"]["rules"]
+                      if r.get("outboundTag") != guard.BLOCK_TAG]
+            cfg["routing"]["rules"] = g + others
+            self.client.put_core_config(cfg)
+
     # ---- 删除客户 ----
     def remove(self, name: str) -> None:
         out_tag = f"out-{name}"

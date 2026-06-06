@@ -1,0 +1,45 @@
+# ISP IP 中转服务 —— 一键集成栈 (Marzban + Xray + RelayHub)
+# 部署: cp .env.example .env && 编辑 .env && bash deploy/setup-reality.sh && docker compose up -d
+#
+# 暴露面 (SEC-2/3):
+#   443         代理入站 (VLESS-Reality), 唯一对外业务端口
+#   127.0.0.1:8000  Marzban 面板  (仅本地, SSH 隧道访问)
+#   127.0.0.1:8080  RelayHub 面板 (仅本地, SSH 隧道访问)
+
+services:
+  marzban:
+    image: gozargah/marzban:latest
+    restart: always
+    environment:
+      SUDO_USERNAME: ${MARZBAN_ADMIN_USER}
+      SUDO_PASSWORD: ${MARZBAN_ADMIN_PASS}
+      XRAY_JSON: /code/xray_config.json
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: "8000"
+    volumes:
+      - marzban_data:/var/lib/marzban
+      - ./deploy/xray_config.json:/code/xray_config.json:ro
+    ports:
+      - "443:443"                       # 代理入站, 对公网
+      - "127.0.0.1:8000:8000"           # 面板, 仅本地
+
+  relayhub:
+    build: ./relayhub
+    restart: always
+    depends_on:
+      - marzban
+    environment:
+      RELAYHUB_MARZBAN_URL: http://marzban:8000     # 内网直连, 不走 TLS
+      RELAYHUB_ADMIN_USER: ${MARZBAN_ADMIN_USER}
+      RELAYHUB_ADMIN_PASS: ${MARZBAN_ADMIN_PASS}
+      RELAYHUB_SHARED_INBOUND_TAG: VLESS_REALITY
+      RELAYHUB_SHARED_INBOUND_PROTOCOL: vless
+      RELAYHUB_VERIFY_TLS: "false"
+      RELAYHUB_LOCAL_IP: ${LOCAL_IP}
+      RELAYHUB_BLOCK_SMTP: ${BLOCK_SMTP:-true}
+      RELAYHUB_BLOCK_BITTORRENT: ${BLOCK_BITTORRENT:-false}
+    ports:
+      - "127.0.0.1:8080:8080"           # RelayHub 面板, 仅本地
+
+volumes:
+  marzban_data:

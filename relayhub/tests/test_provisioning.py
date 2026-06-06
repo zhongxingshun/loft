@@ -115,6 +115,27 @@ def test_rotate_sub(svc):
     assert new == "https://panel:8000/sub/zhangNEWTOKEN"
 
 
+def test_ensure_guard_seeds_blackhole_and_top_rules(settings):
+    """空配置时 ensure_guard 也应植入 blackhole 出站 + 置顶护栏 (部署 bootstrap)。"""
+    svc = ProvisioningService(FakeMarzban(), settings)
+    svc.ensure_guard()
+    guard = block_rules(settings.local_ip, settings.block_smtp, settings.block_bittorrent)
+    assert any(o.get("tag") == "block" for o in svc.client.cfg["outbounds"])
+    assert _rules(svc) == guard                              # 仅护栏, 无客户
+    # 幂等: 再跑一次不翻倍
+    svc.ensure_guard()
+    assert _rules(svc) == guard
+
+
+def test_ensure_guard_preserves_customer_rules(settings):
+    svc = ProvisioningService(FakeMarzban(), settings)
+    svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
+    svc.ensure_guard()
+    guard = block_rules(settings.local_ip, settings.block_smtp, settings.block_bittorrent)
+    assert _rules(svc)[: len(guard)] == guard                # 护栏仍置顶
+    assert any(r.get("outboundTag") == "out-zhang" for r in _rules(svc))  # 客户保留
+
+
 def test_bad_line_does_not_touch_config(svc):
     with pytest.raises(ValueError):
         svc.provision(LineSpec(name="zhang", line="not-a-line"))

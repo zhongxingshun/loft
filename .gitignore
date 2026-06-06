@@ -9,5 +9,8 @@ __pycache__/
 *.env
 !*.env.example
 
+# 渲染后含 Reality 私钥, 不入库 (模板 xray_config.template.json 入库)
+deploy/xray_config.json
+
 # macOS
 .DS_Store
