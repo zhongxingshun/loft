@@ -75,6 +75,30 @@ docker compose logs marzban --no-color | \
 |---|---|
 | **出站护栏生效** | 客户连上后，确认无法访问 `127.0.0.1` / 内网 / `169.254.169.254` / 出站 25 |
 
+## 告警（可选，到期/流量/线路）
+
+配置 Telegram 后，客户**快到期 / 流量快到上限 / decode 线路探活失败**时自动推送给你。
+
+1. 找 [@BotFather](https://t.me/BotFather) 创建 bot 拿 token；找 [@userinfobot](https://t.me/userinfobot) 拿你的 chat_id
+2. 在 `.env` 填：
+   ```
+   TELEGRAM_BOT_TOKEN=123456:ABC...
+   TELEGRAM_CHAT_ID=88888888
+   ALERT_INTERVAL_MIN=10        # 每10分钟自检推送 (0=关闭)
+   ALERT_EXPIRE_DAYS=3          # 剩 3 天内到期就提醒
+   ALERT_TRAFFIC_PCT=90         # 流量用到 90% 就提醒
+   ```
+3. `docker compose up -d` 重启生效。RelayHub 后台定时自检，内存去重不刷屏。
+
+手动预览 / 测试推送：
+```bash
+docker compose exec relayhub python -m scripts.check_alerts          # 仅预览
+docker compose exec relayhub python -m scripts.check_alerts --send   # 测试推送
+```
+RelayHub 面板左侧 🔔 也会实时显示当前告警条数。
+
+> 配合每客户 `--gb` 上限，能稳稳把总流量压在 VPS 月额度内（如搬瓦工 2TB/月）。
+
 ## 组件与端口
 
 | 服务 | 端口 | 暴露 | 说明 |

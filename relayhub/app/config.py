@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     block_smtp: bool = True                     # 封出站 25 端口
     block_bittorrent: bool = False              # 封 BT, 降低 DMCA 投诉
 
+    # ---- 告警 (P5) ----
+    telegram_bot_token: str = ""                # 配齐 token+chat_id 才会真正推送
+    telegram_chat_id: str = ""
+    alert_expire_days: int = 3                  # 剩余天数 <= 此值则告警
+    alert_traffic_pct: int = 90                 # 流量用量 >= 此百分比则告警
+    alert_check_health: bool = False            # 告警时附带 decode 线路探活
+    alert_interval_min: int = 0                 # 0=不启用后台定时; >0 每 N 分钟自检
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="RELAYHUB_",

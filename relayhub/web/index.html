@@ -85,7 +85,7 @@
       <a><span class="ico">👥</span> 客户管理</a>
       <a><span class="ico">🌐</span> decode 线路池</a>
       <a><span class="ico">📈</span> 流量统计</a>
-      <a><span class="ico">🔔</span> 告警</a>
+      <a id="nav-alerts" onclick="showAlerts()"><span class="ico">🔔</span> 告警 <span id="alert-badge" style="display:none;margin-left:auto;background:var(--bad);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px"></span></a>
       <a><span class="ico">⚙️</span> 设置</a>
     </nav>
   </aside>
@@ -146,6 +146,7 @@ const API = location.origin.startsWith("http") ? "" : "";  // 同源
 let DEMO = false;
 let customers = [];
 let healthMap = {};   // name -> {ok, latency_ms, exit_ip, error}
+let alertsList = [];
 
 const demoCustomers = [
   {name:"zhang",exit:"1.2.3.4:8080",status:"ok",used_gb:43,limit_gb:100,expire:"23 天"},
@@ -175,6 +176,7 @@ async function load(){
       used_gb:customers.reduce((a,c)=>a+c.used_gb,0), expiring:1});
   }
   render();
+  loadAlerts();
 }
 
 function renderStats(s){
@@ -224,6 +226,27 @@ async function checkHealth(){
     toast(bad ? `检测完成：${bad} 条线路异常` : '检测完成：全部正常');
   }catch(e){ toast('检测失败：'+e.message); }
   finally{ b.disabled=false; b.textContent='🩺 检测线路'; }
+}
+
+async function loadAlerts(){
+  try{ alertsList = DEMO ? demoAlerts() : await api('/api/alerts'); }
+  catch{ alertsList = []; }
+  const b=document.getElementById('alert-badge');
+  if(alertsList.length){ b.style.display='inline-block'; b.textContent=alertsList.length; }
+  else b.style.display='none';
+}
+function demoAlerts(){
+  const out=[];
+  customers.forEach(c=>{
+    if(c.expire&&c.expire.endsWith('天')&&parseInt(c.expire)<=7) out.push({name:c.name,kind:'expiring',severity:'warn',message:`${c.name} 将在 ${parseInt(c.expire)} 天后到期`});
+    if(c.limit_gb&&c.used_gb/c.limit_gb>=0.9) out.push({name:c.name,kind:'traffic',severity:'warn',message:`${c.name} 流量已用 ${Math.round(c.used_gb/c.limit_gb*100)}%`});
+    if(c.status==='bad') out.push({name:c.name,kind:'expired',severity:'bad',message:`${c.name} 已到期或超流量`});
+  });
+  return out;
+}
+function showAlerts(){
+  if(!alertsList.length){ toast('当前无告警'); return; }
+  alert('当前告警：\n\n'+alertsList.map(a=>(a.severity==='bad'?'🔴':'🟡')+' '+a.message).join('\n'));
 }
 
 const mask=document.getElementById('mask');

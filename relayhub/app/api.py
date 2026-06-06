@@ -4,16 +4,19 @@
 """
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import ValidationError
 
+from .alerts import AlertService
 from .config import load_settings
 from .health import HealthChecker
 from .marzban import MarzbanClient, MarzbanError
 from .models import LineSpec
+from .notify import TelegramNotifier
 from .provisioning import ProvisioningService
 
 app = FastAPI(title="RelayHub", version="0.1.0")
@@ -21,6 +24,24 @@ app = FastAPI(title="RelayHub", version="0.1.0")
 _settings = load_settings()
 _service = ProvisioningService(MarzbanClient(_settings), _settings)
 _checker = HealthChecker()
+_notifier = TelegramNotifier(_settings.telegram_bot_token, _settings.telegram_chat_id)
+_alerts = AlertService(_service, _settings, _notifier, _checker)
+
+
+def _alert_loop():
+    interval = max(60, _settings.alert_interval_min * 60)
+    while True:
+        try:
+            _alerts.run_once()
+        except Exception:                  # noqa: BLE001 — 后台循环不因单次失败退出
+            pass
+        time.sleep(interval)
+
+
+@app.on_event("startup")
+def _start_scheduler():
+    if _settings.alert_interval_min > 0 and _notifier.enabled:
+        threading.Thread(target=_alert_loop, daemon=True).start()
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -75,6 +96,12 @@ def stats():
 def health():
     """对每条 decode 线路做真实探活, 返回延迟与出口 IP (P5)。"""
     return _checker.check_many(_service.line_endpoints())
+
+
+@app.get("/api/alerts")
+def alerts():
+    """当前告警预览 (到期/流量/线路), 不推送 (P5)。"""
+    return _alerts.current()
 
 
 @app.post("/api/lines/{name}/rotate-sub")

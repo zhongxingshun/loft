@@ -54,3 +54,11 @@ class HealthResult(BaseModel):
     latency_ms: Optional[int] = None
     exit_ip: Optional[str] = None      # 经该线路出站看到的公网 IP
     error: Optional[str] = None
+
+
+class Alert(BaseModel):
+    """告警事件 (P5)。"""
+    name: str
+    kind: Literal["expiring", "traffic", "expired", "offline"]
+    severity: Literal["warn", "bad"]
+    message: str
