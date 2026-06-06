@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中转线路管理面板 — 原型</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1d212c; --line:#272b38;
+    --text:#e6e8ee; --muted:#8b90a0; --brand:#5b7cfa; --brand2:#7c5bfa;
+    --ok:#27c08a; --warn:#f5a623; --bad:#f0506e; --chip:#222634;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+
+  /* sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;padding:6px 8px 20px}
+  .logo .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));
+    display:grid;place-items:center;font-size:14px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--muted);
+    text-decoration:none;margin-bottom:4px;cursor:pointer}
+  .nav a.active,.nav a:hover{background:var(--panel2);color:var(--text)}
+  .nav .ico{width:18px;text-align:center}
+
+  /* main */
+  .main{padding:24px 30px;overflow:auto}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .top h1{font-size:20px}
+  .top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .btn{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;
+    padding:10px 16px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card .k{color:var(--muted);font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .card .v{font-size:26px;font-weight:700}
+  .card .v small{font-size:13px;color:var(--muted);font-weight:500}
+
+  /* table */
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .tablewrap .hd{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .search{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--text);width:220px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:13px 18px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:500;background:var(--panel2)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#191d27}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;background:var(--chip)}
+  .dot2{width:7px;height:7px;border-radius:50%}
+  .ok{color:var(--ok)} .ok .dot2{background:var(--ok)}
+  .warn{color:var(--warn)} .warn .dot2{background:var(--warn)}
+  .bad{color:var(--bad)} .bad .dot2{background:var(--bad)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .bar{height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;width:90px;margin-top:5px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .rowbtn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px}
+  .rowbtn:hover{color:var(--text);border-color:var(--brand)}
+
+  /* modal */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:50;backdrop-filter:blur(3px)}
+  .mask.show{display:grid}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:520px;max-width:94vw;
+    padding:24px;animation:pop .18s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal h2{font-size:18px;margin-bottom:4px}
+  .modal .desc{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;margin-bottom:7px;color:var(--text)}
+  .field .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .field input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;color:var(--text);font-size:14px;font-family:ui-monospace,Menlo,monospace}
+  .field input:focus{outline:none;border-color:var(--brand)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+
+  /* result */
+  .result{display:none}
+  .result.show{display:block}
+  .form.hide{display:none}
+  .okhead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .okhead .ck{width:42px;height:42px;border-radius:50%;background:rgba(39,192,138,.15);color:var(--ok);
+    display:grid;place-items:center;font-size:22px}
+  .sub-box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;
+    display:flex;gap:10px;align-items:center;margin-bottom:14px}
+  .sub-box .link{flex:1;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--brand);word-break:break-all}
+  .qr{width:140px;height:140px;border-radius:10px;background:#fff;margin:8px auto 16px;
+    background-image:repeating-linear-gradient(45deg,#000 0 6px,#fff 6px 12px);opacity:.92}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .kv:last-child{border:none}
+  .kv span:first-child{color:var(--muted)}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ok);color:#06291d;padding:11px 20px;border-radius:10px;font-weight:600;
+    opacity:0;transition:.25s;z-index:80}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="logo"><span class="dot">⚡</span> RelayHub</div>
+    <nav class="nav">
+      <a class="active"><span class="ico">📊</span> 线路总览</a>
+      <a><span class="ico">👥</span> 客户管理</a>
+      <a><span class="ico">🌐</span> decode 线路池</a>
+      <a><span class="ico">📈</span> 流量统计</a>
+      <a><span class="ico">🔔</span> 告警</a>
+      <a><span class="ico">⚙️</span> 设置</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>线路总览</h1>
+        <div class="sub">中转 VPS · sg-relay-01 · Marzban + Xray · 在线</div>
+      </div>
+      <button class="btn" onclick="openModal()">＋ 开通新线路</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="card"><div class="k">👥 客户总数</div><div class="v">12 <small>人</small></div></div>
+      <div class="card"><div class="k">🌐 在线线路</div><div class="v">11<small>/12</small></div></div>
+      <div class="card"><div class="k">📈 今日流量</div><div class="v">86.4 <small>GB</small></div></div>
+      <div class="card"><div class="k">⏳ 7天内到期</div><div class="v">2 <small>人</small></div></div>
+    </div>
+
+    <!-- Table -->
+    <div class="tablewrap">
+      <div class="hd">
+        <strong>客户 / 线路</strong>
+        <input class="search" placeholder="搜索客户名 / IP…">
+      </div>
+      <table>
+        <thead><tr>
+          <th>客户</th><th>decode 出口</th><th>线路状态</th><th>已用 / 上限</th><th>到期</th><th>订阅</th><th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <!-- form -->
+    <div class="form" id="form">
+      <h2>开通新线路</h2>
+      <div class="desc">输入 decode 购买的 SOCKS5 线路，自动配置 outbound + 路由并生成订阅</div>
+      <div class="field">
+        <label>客户名 <span style="color:var(--muted)">（= 订阅用户名，唯一）</span></label>
+        <input id="i-name" placeholder="例如 zhang">
+      </div>
+      <div class="field">
+        <label>decode 线路串（SOCKS5）</label>
+        <input id="i-line" placeholder="ip:port:user:pass  或  ip:port">
+        <div class="hint">从 decode 购买后复制的代理串，无鉴权可只填 ip:port</div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>有效期（天）</label><input id="i-days" value="30"></div>
+        <div class="field"><label>流量上限（GB，0=不限）</label><input id="i-gb" value="0"></div>
+      </div>
+      <div class="foot">
+        <button class="btn ghost" onclick="closeModal()">取消</button>
+        <button class="btn" onclick="submitLine()">开通并生成订阅</button>
+      </div>
+    </div>
+
+    <!-- result -->
+    <div class="result" id="result">
+      <div class="okhead">
+        <div class="ck">✓</div>
+        <div><h2 id="r-title">客户 zhang 已开通</h2>
+          <div class="desc" style="margin:0">outbound + 路由 + 用户已配置，Xray 已热重载</div></div>
+      </div>
+      <div class="qr"></div>
+      <div class="sub-box">
+        <div class="link" id="r-sub">https://sg-relay-01.example.com:8000/sub/Zx9aQ2kLpR</div>
+        <button class="rowbtn" onclick="copySub()">复制</button>
+      </div>
+      <div class="kv"><span>出口线路</span><span class="mono" id="r-line">—</span></div>
+      <div class="kv"><span>路由规则</span><span class="mono">user=<b id="r-name">—</b> → out-<b id="r-name2">—</b></span></div>
+      <div class="kv"><span>有效期</span><span id="r-days">—</span></div>
+      <div class="foot">
+        <button class="btn ghost" onclick="closeModal()">完成</button>
+        <button class="btn" onclick="backToForm()">再开一个</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script>
+const rows = [
+  ["zhang","1.2.3.4:8080","ok","在线","43%","43 / 100 GB","23 天"],
+  ["li_ming","45.76.x.x:1080","ok","在线","12%","6 / 50 GB","12 天"],
+  ["wang","103.21.x.x:8000","warn","高延迟","78%","78 / 100 GB","5 天"],
+  ["chen_j","51.89.x.x:8080","ok","在线","31%","31 / 100 GB","28 天"],
+  ["zhao","189.6.x.x:1080","bad","离线","0%","0 / 50 GB","3 天"],
+  ["sun_y","77.111.x.x:8080","ok","在线","55%","55 / 100 GB","19 天"],
+];
+function pct(s){return s.endsWith('%')?s:'0%'}
+document.getElementById('tbody').innerHTML = rows.map(r=>`
+  <tr>
+    <td><b>${r[0]}</b></td>
+    <td class="mono">${r[1]}</td>
+    <td><span class="tag ${r[2]}"><span class="dot2"></span>${r[3]}</span></td>
+    <td>${r[5]}<div class="bar"><i style="width:${r[4]}"></i></div></td>
+    <td>${r[6]}</td>
+    <td><button class="rowbtn" onclick="copySub()">📋 订阅</button></td>
+    <td><button class="rowbtn">⋯</button></td>
+  </tr>`).join('');
+
+const mask=document.getElementById('mask');
+function openModal(){mask.classList.add('show');backToForm()}
+function closeModal(){mask.classList.remove('show')}
+function backToForm(){
+  document.getElementById('form').classList.remove('hide');
+  document.getElementById('result').classList.remove('show');
+  ['i-name','i-line'].forEach(id=>document.getElementById(id).value='');
+}
+function submitLine(){
+  const name=document.getElementById('i-name').value.trim()||'zhang';
+  const line=document.getElementById('i-line').value.trim()||'1.2.3.4:8080:user:pass';
+  const days=document.getElementById('i-days').value||'30';
+  const gb=document.getElementById('i-gb').value||'0';
+  // 模拟 add_line.py 执行结果
+  document.getElementById('r-title').textContent=`客户 ${name} 已开通`;
+  document.getElementById('r-sub').textContent=`https://sg-relay-01.example.com:8000/sub/${Math.random().toString(36).slice(2,12)}`;
+  document.getElementById('r-line').textContent=line.split(':').slice(0,2).join(':');
+  document.getElementById('r-name').textContent=name;
+  document.getElementById('r-name2').textContent=name;
+  document.getElementById('r-days').textContent= days==='0' ? '不限' : days+' 天';
+  document.getElementById('form').classList.add('hide');
+  document.getElementById('result').classList.add('show');
+}
+function copySub(){
+  const t=document.getElementById('toast');
+  navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('r-sub').textContent).catch(()=>{});
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);
+}
+mask.addEventListener('click',e=>{if(e.target===mask)closeModal()});
+</script>
+</body>
+</html>

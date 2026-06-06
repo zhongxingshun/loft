@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RelayHub — 中转线路管理面板</title>
+<style>
+  :root{--bg:#0f1117;--panel:#171a23;--panel2:#1d212c;--line:#272b38;--text:#e6e8ee;
+    --muted:#8b90a0;--brand:#5b7cfa;--brand2:#7c5bfa;--ok:#27c08a;--warn:#f5a623;--bad:#f0506e;--chip:#222634;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  .side{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;padding:6px 8px 20px}
+  .logo .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-size:14px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:var(--muted);text-decoration:none;margin-bottom:4px;cursor:pointer}
+  .nav a.active,.nav a:hover{background:var(--panel2);color:var(--text)}
+  .nav .ico{width:18px;text-align:center}
+  .main{padding:24px 30px;overflow:auto}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .top h1{font-size:20px}
+  .top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .btn{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;padding:10px 16px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+  .banner{background:rgba(245,166,35,.12);border:1px solid var(--warn);color:var(--warn);padding:8px 14px;border-radius:9px;margin-bottom:16px;font-size:13px;display:none}
+  .banner.show{display:block}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card .k{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .card .v{font-size:26px;font-weight:700}
+  .card .v small{font-size:13px;color:var(--muted);font-weight:500}
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .tablewrap .hd{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .search{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--text);width:220px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:13px 18px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:500;background:var(--panel2)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#191d27}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;background:var(--chip)}
+  .dot2{width:7px;height:7px;border-radius:50%}
+  .ok{color:var(--ok)} .ok .dot2{background:var(--ok)}
+  .warn{color:var(--warn)} .warn .dot2{background:var(--warn)}
+  .bad{color:var(--bad)} .bad .dot2{background:var(--bad)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .bar{height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;width:90px;margin-top:5px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .rowbtn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px}
+  .rowbtn:hover{color:var(--text);border-color:var(--brand)}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:50;backdrop-filter:blur(3px)}
+  .mask.show{display:grid}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:520px;max-width:94vw;padding:24px;animation:pop .18s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal h2{font-size:18px;margin-bottom:4px}
+  .modal .desc{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;margin-bottom:7px}
+  .field .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .field input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px 13px;color:var(--text);font-size:14px;font-family:ui-monospace,Menlo,monospace}
+  .field input:focus{outline:none;border-color:var(--brand)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+  .result{display:none}.result.show{display:block}.form.hide{display:none}
+  .okhead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .okhead .ck{width:42px;height:42px;border-radius:50%;background:rgba(39,192,138,.15);color:var(--ok);display:grid;place-items:center;font-size:22px}
+  .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px}
+  .sub-box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;gap:10px;align-items:center;margin-bottom:14px}
+  .sub-box .link{flex:1;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--brand);word-break:break-all}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .kv:last-child{border:none}.kv span:first-child{color:var(--muted)}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ok);color:#06291d;padding:11px 20px;border-radius:10px;font-weight:600;opacity:0;transition:.25s;z-index:80}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite;vertical-align:-2px}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><span class="dot">⚡</span> RelayHub</div>
+    <nav class="nav">
+      <a class="active"><span class="ico">📊</span> 线路总览</a>
+      <a><span class="ico">👥</span> 客户管理</a>
+      <a><span class="ico">🌐</span> decode 线路池</a>
+      <a><span class="ico">📈</span> 流量统计</a>
+      <a><span class="ico">🔔</span> 告警</a>
+      <a><span class="ico">⚙️</span> 设置</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div><h1>线路总览</h1><div class="sub" id="conn">连接中…</div></div>
+      <button class="btn" onclick="openModal()">＋ 开通新线路</button>
+    </div>
+    <div class="banner" id="banner">⚠️ 无法连接后端 API，正在显示演示数据。请确认 RelayHub 服务已启动并通过 SSH 隧道访问。</div>
+    <div class="stats" id="stats"></div>
+    <div class="tablewrap">
+      <div class="hd"><strong>客户 / 线路</strong><input class="search" id="search" placeholder="搜索客户名 / IP…" oninput="render()"></div>
+      <table><thead><tr>
+        <th>客户</th><th>decode 出口</th><th>线路状态</th><th>已用 / 上限</th><th>到期</th><th>订阅</th><th></th>
+      </tr></thead><tbody id="tbody"></tbody></table>
+    </div>
+  </main>
+</div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="form" id="form">
+      <h2>开通新线路</h2>
+      <div class="desc">输入 decode 购买的 SOCKS5 线路，自动配置 outbound + 路由并生成订阅</div>
+      <div class="field"><label>客户名 <span style="color:var(--muted)">（= 订阅用户名，唯一，字母数字下划线）</span></label>
+        <input id="i-name" placeholder="例如 zhang"></div>
+      <div class="field"><label>decode 线路串（SOCKS5）</label>
+        <input id="i-line" placeholder="ip:port:user:pass  或  ip:port">
+        <div class="hint">从 decode 购买后复制的代理串，无鉴权可只填 ip:port</div></div>
+      <div class="row2">
+        <div class="field"><label>有效期（天）</label><input id="i-days" value="30"></div>
+        <div class="field"><label>流量上限（GB，0=不限）</label><input id="i-gb" value="0"></div>
+      </div>
+      <div class="err" id="form-err"></div>
+      <div class="foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+        <button class="btn" id="submit-btn" onclick="submitLine()">开通并生成订阅</button></div>
+    </div>
+    <div class="result" id="result">
+      <div class="okhead"><div class="ck">✓</div>
+        <div><h2 id="r-title">已开通</h2><div class="desc" style="margin:0">outbound + 护栏 + 用户已配置，Xray 已热重载</div></div></div>
+      <div class="sub-box"><div class="link" id="r-sub"></div><button class="rowbtn" onclick="copyText(document.getElementById('r-sub').textContent)">复制</button></div>
+      <div class="kv"><span>出口线路</span><span class="mono" id="r-line">—</span></div>
+      <div class="kv"><span>路由规则</span><span class="mono">护栏置顶 → user=<b id="r-name">—</b> → <b id="r-tag">—</b></span></div>
+      <div class="kv"><span>有效期</span><span id="r-days">—</span></div>
+      <div class="foot"><button class="btn ghost" onclick="closeModal()">完成</button>
+        <button class="btn" onclick="backToForm()">再开一个</button></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script>
+const API = location.origin.startsWith("http") ? "" : "";  // 同源
+let DEMO = false;
+let customers = [];
+
+const demoCustomers = [
+  {name:"zhang",exit:"1.2.3.4:8080",status:"ok",used_gb:43,limit_gb:100,expire:"23 天"},
+  {name:"li_ming",exit:"45.76.x.x:1080",status:"ok",used_gb:6,limit_gb:50,expire:"12 天"},
+  {name:"wang",exit:"103.21.x.x:8000",status:"warn",used_gb:78,limit_gb:100,expire:"5 天"},
+  {name:"zhao",exit:"189.6.x.x:1080",status:"bad",used_gb:0,limit_gb:50,expire:"已过期"},
+];
+
+async function api(path, opts){
+  const r = await fetch(path, {headers:{"Content-Type":"application/json"}, ...opts});
+  if(!r.ok){ let m; try{m=(await r.json()).error?.message}catch{} throw new Error(m||("HTTP "+r.status)); }
+  return r.status===204 ? null : r.json();
+}
+
+async function load(){
+  try{
+    const [st, list] = await Promise.all([api("/api/stats"), api("/api/lines")]);
+    customers = list; DEMO=false;
+    document.getElementById("banner").classList.remove("show");
+    document.getElementById("conn").textContent = "中转 VPS · 已连接 · "+customers.length+" 个客户";
+    renderStats(st);
+  }catch(e){
+    DEMO=true; customers = demoCustomers;
+    document.getElementById("banner").classList.add("show");
+    document.getElementById("conn").textContent = "演示模式（未连接后端）";
+    renderStats({customers:customers.length, online:customers.filter(c=>c.status==='ok').length,
+      used_gb:customers.reduce((a,c)=>a+c.used_gb,0), expiring:1});
+  }
+  render();
+}
+
+function renderStats(s){
+  document.getElementById("stats").innerHTML = `
+    <div class="card"><div class="k">👥 客户总数</div><div class="v">${s.customers} <small>人</small></div></div>
+    <div class="card"><div class="k">🌐 在线线路</div><div class="v">${s.online}<small>/${s.customers}</small></div></div>
+    <div class="card"><div class="k">📈 累计流量</div><div class="v">${s.used_gb} <small>GB</small></div></div>
+    <div class="card"><div class="k">⏳ 7天内到期</div><div class="v">${s.expiring} <small>人</small></div></div>`;
+}
+
+function render(){
+  const q = (document.getElementById("search").value||"").toLowerCase();
+  const rows = customers.filter(c => c.name.toLowerCase().includes(q) || (c.exit||"").toLowerCase().includes(q));
+  const label = {ok:"在线",warn:"注意",bad:"离线/到期"};
+  const tb = document.getElementById("tbody");
+  if(!rows.length){ tb.innerHTML = `<tr><td colspan="7"><div class="empty">暂无客户，点右上角「＋ 开通新线路」</div></td></tr>`; return; }
+  tb.innerHTML = rows.map(c=>{
+    const pct = c.limit_gb ? Math.min(100, Math.round(c.used_gb/c.limit_gb*100)) : 0;
+    const lim = c.limit_gb ? `${c.used_gb} / ${c.limit_gb} GB` : `${c.used_gb} GB / 不限`;
+    return `<tr>
+      <td><b>${c.name}</b></td>
+      <td class="mono">${c.exit}</td>
+      <td><span class="tag ${c.status}"><span class="dot2"></span>${label[c.status]||c.status}</span></td>
+      <td>${lim}<div class="bar"><i style="width:${pct}%"></i></div></td>
+      <td>${c.expire}</td>
+      <td><button class="rowbtn" onclick="rotate('${c.name}')">🔄 订阅</button></td>
+      <td><button class="rowbtn" onclick="removeLine('${c.name}')">🗑</button></td>
+    </tr>`;}).join('');
+}
+
+const mask=document.getElementById('mask');
+function openModal(){mask.classList.add('show');backToForm()}
+function closeModal(){mask.classList.remove('show')}
+function backToForm(){
+  document.getElementById('form').classList.remove('hide');
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('form-err').textContent='';
+  ['i-name','i-line'].forEach(id=>document.getElementById(id).value='');
+}
+
+async function submitLine(){
+  const name=document.getElementById('i-name').value.trim();
+  const line=document.getElementById('i-line').value.trim();
+  const days=parseInt(document.getElementById('i-days').value||'30',10);
+  const gb=parseFloat(document.getElementById('i-gb').value||'0');
+  const err=document.getElementById('form-err'); err.textContent='';
+  if(!name||!line){ err.textContent='请填写客户名与线路串'; return; }
+  const btn=document.getElementById('submit-btn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> 开通中…';
+  try{
+    let res;
+    if(DEMO){ await new Promise(r=>setTimeout(r,500));
+      res={name, sub_url:"https://demo.example.com/sub/"+Math.random().toString(36).slice(2,12),
+        exit:line.split(':').slice(0,2).join(':'), out_tag:"out-"+name, expire_days:days||null}; }
+    else { res = await api("/api/lines", {method:"POST", body:JSON.stringify({name,line,days,gb})}); }
+    showResult(res);
+    if(!DEMO) load();
+  }catch(e){ err.textContent = "开通失败：" + e.message; }
+  finally{ btn.disabled=false; btn.textContent='开通并生成订阅'; }
+}
+
+function showResult(r){
+  document.getElementById('r-title').textContent=`客户 ${r.name} 已开通`;
+  document.getElementById('r-sub').textContent=r.sub_url;
+  document.getElementById('r-line').textContent=r.exit;
+  document.getElementById('r-name').textContent=r.name;
+  document.getElementById('r-tag').textContent=r.out_tag;
+  document.getElementById('r-days').textContent= r.expire_days==null ? '不限' : r.expire_days+' 天';
+  document.getElementById('form').classList.add('hide');
+  document.getElementById('result').classList.add('show');
+}
+
+async function rotate(name){
+  if(DEMO){ toast("演示模式：已模拟重置订阅"); return; }
+  if(!confirm(`重置 ${name} 的订阅链接？旧链接将失效。`)) return;
+  try{ const r=await api(`/api/lines/${name}/rotate-sub`,{method:"POST"}); copyText(r.sub_url); toast("新订阅已复制"); }
+  catch(e){ alert("失败："+e.message); }
+}
+async function removeLine(name){
+  if(!confirm(`删除客户 ${name}？将移除其 outbound、路由与订阅。`)) return;
+  if(DEMO){ customers=customers.filter(c=>c.name!==name); render(); return; }
+  try{ await api(`/api/lines/${name}`,{method:"DELETE"}); load(); }
+  catch(e){ alert("失败："+e.message); }
+}
+
+function copyText(t){ navigator.clipboard&&navigator.clipboard.writeText(t).catch(()=>{}); toast("已复制到剪贴板"); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1500); }
+mask.addEventListener('click',e=>{if(e.target===mask)closeModal()});
+
+load();
+</script>
+</body>
+</html>

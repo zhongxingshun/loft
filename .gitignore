@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# 密钥/环境 (SEC-7: 不入库)
+.env
+*.env
+!*.env.example
+
+# macOS
+.DS_Store

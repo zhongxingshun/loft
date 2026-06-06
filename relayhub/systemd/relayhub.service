@@ -1,0 +1,16 @@
+[Unit]
+Description=RelayHub 中转开通服务 (Web)
+After=network.target marzban.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/relayhub
+EnvironmentFile=/opt/relayhub/.env
+ExecStart=/opt/relayhub/.venv/bin/uvicorn app.api:app --host 127.0.0.1 --port 8080
+Restart=always
+RestartSec=3
+# 仅监听 127.0.0.1 (SEC-3), 运维经 SSH 隧道访问:
+#   ssh -L 8080:127.0.0.1:8080 user@vps -p 2222
+
+[Install]
+WantedBy=multi-user.target
