@@ -46,12 +46,34 @@ ssh -L 8080:127.0.0.1:8080 -L 8000:127.0.0.1:8000 user@<VPS> -p <SSH端口>
   docker compose exec relayhub python -m scripts.add_line zhang 1.2.3.4:8080:user:pass --days 30
   ```
 
-## 首次运行需验证的两点
+## 首次运行：核验分流是否真的命中
 
-| # | 验证 | 方法 |
+开通默认已用**多候选 email 匹配**（同时写入 `客户名` 和 `客户名@VLESS_REALITY`），覆盖常见格式。
+客户连上并产生流量后，跑一次**路由核验**，直接从日志看每个客户走了哪个出口：
+
+```bash
+docker compose logs marzban --no-color | \
+  docker compose exec -T relayhub python -m scripts.verify_routing
+```
+
+输出解读：
+
+| OUTBOUND | 判定 | 含义 |
 |---|---|---|
-| 1 | **用户 email 格式**（决定分流是否生效） | `docker compose exec marzban marzban cli ...` 或看 xray 日志里 email 字段，按需校正路由匹配 |
-| 2 | **出站护栏生效** | 客户连上后，确认无法访问 `127.0.0.1` / 内网 / `169.254.169.254` / 出站 25 |
+| `out-<客户>` | ✅ 分流命中 | 流量确实走该客户的 decode 出口 |
+| `block` | 护栏拦截 | 私网/25 被拦（符合预期，SEC-5） |
+| `direct` | ⚠️ 未命中分流 | 走了默认出口（VPS 本机 IP），分流失效 |
+
+若某客户被标红走 `direct`，输出里会**显示其真实 email 格式**（例如带 id 前缀的 `7.wang`）。
+据此把该格式补进 `relayhub/app/provisioning.py::email_candidates` 即可，重新开通后再核验。
+
+> 这一步把"email 格式对不对"变成了"出口对不对"的直接判定，无需额外客户端。
+
+## 另一项首次验证
+
+| 验证 | 方法 |
+|---|---|
+| **出站护栏生效** | 客户连上后，确认无法访问 `127.0.0.1` / 内网 / `169.254.169.254` / 出站 25 |
 
 ## 组件与端口
 

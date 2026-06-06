@@ -67,9 +67,18 @@ def test_provision_writes_guard_on_top(svc, settings):
     guard = block_rules(settings.local_ip, settings.block_smtp, settings.block_bittorrent)
     rules = _rules(svc)
     assert rules[: len(guard)] == guard                     # 护栏置顶
-    assert rules[len(guard)]["outboundTag"] == "out-zhang"  # 客户规则紧随其后
+    crule = rules[len(guard)]
+    assert crule["outboundTag"] == "out-zhang"              # 客户规则紧随其后
+    # 多候选 email 匹配: 同时含纯用户名与 用户名@inbound
+    assert "zhang" in crule["user"]
+    assert "zhang@VLESS_REALITY" in crule["user"]
     # blackhole 出站已就位
     assert any(o.get("tag") == "block" for o in svc.client.cfg["outbounds"])
+
+
+def test_provision_result_exposes_match_keys(svc):
+    r = svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
+    assert r.match_keys == ["zhang", "zhang@VLESS_REALITY"]
 
 
 def test_security_regression_guard_stays_on_top_with_preexisting_rules(settings):

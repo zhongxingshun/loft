@@ -33,6 +33,7 @@ class ProvisionResult(BaseModel):
     exit: str                       # 出口 ip:port
     out_tag: str
     expire_days: Optional[int] = None
+    match_keys: list[str] = []      # 路由 user 多候选 (兼容不同 email 格式)
 
 
 class CustomerView(BaseModel):

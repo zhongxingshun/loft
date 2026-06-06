@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     admin_user: str = "admin"
     admin_pass: str = "change-me"
 
-    # ---- 共享 inbound ----
-    shared_inbound_tag: str = "VLESS_WS_INBOUND"
+    # ---- 共享 inbound (集成栈默认 VLESS-Reality) ----
+    shared_inbound_tag: str = "VLESS_REALITY"
     shared_inbound_protocol: str = "vless"      # vless / vmess / trojan
     verify_tls: bool = True                     # 自签证书改 False
 

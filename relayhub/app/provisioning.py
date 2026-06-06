@@ -16,6 +16,23 @@ from .parsing import parse_socks
 _GB = 1024 ** 3
 
 
+def email_candidates(name: str, inbound_tag: str) -> list[str]:
+    """路由 user 字段的多候选 email, 兼容不同 Marzban 版本的 email 格式。
+
+    覆盖最常见两种: 纯用户名、用户名@inbound。Xray 对 user 列表做 OR 匹配,
+    任一命中即生效。若实际为带内部 id 前缀的格式 (无法预测), 由 verify_routing
+    诊断暴露真实 email 后再补。
+    """
+    cands = [name, f"{name}@{inbound_tag}"]
+    seen: set[str] = set()
+    out: list[str] = []
+    for c in cands:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
 def make_outbound(out_tag: str, sock: SocksEndpoint) -> dict:
     server: dict = {"address": sock.address, "port": sock.port}
     if sock.user:
@@ -56,6 +73,7 @@ class ProvisioningService:
             exit=sock.label,
             out_tag=out_tag,
             expire_days=None if spec.days == 0 else spec.days,
+            match_keys=email_candidates(spec.name, self.s.shared_inbound_tag),
         )
 
     # ---- 初始化: 确保安全护栏就位 (部署 bootstrap 用, 无客户时也生效) ----
@@ -159,9 +177,13 @@ class ProvisioningService:
 
 
 def block_then_customer(rules: list[dict], name: str, out_tag: str, s: Settings) -> list[dict]:
-    """重建护栏并置顶, 客户分流规则插其后。"""
+    """重建护栏并置顶, 客户分流规则插其后 (user 用多候选, 兼容 email 格式)。"""
     g = guard.block_rules(s.local_ip, s.block_smtp, s.block_bittorrent)
-    customer_rule = {"type": "field", "user": [name], "outboundTag": out_tag}
+    customer_rule = {
+        "type": "field",
+        "user": email_candidates(name, s.shared_inbound_tag),
+        "outboundTag": out_tag,
+    }
     return guard.reorder_rules(rules, customer_rule, out_tag, g)
 
 
