@@ -1,0 +1,14 @@
+# 仅把订阅路径 /sub/* 暴露到公网 (HTTP 80)。面板 /dashboard /api 不经此暴露。
+# 反代到内网 Marzban (自签 HTTPS, 跳过校验)。客户端用 http://<IP>/sub/<token> 拉订阅。
+:80 {
+	handle /sub/* {
+		reverse_proxy https://marzban:8000 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}

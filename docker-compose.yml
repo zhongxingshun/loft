@@ -16,12 +16,19 @@ services:
       XRAY_JSON: /code/xray_config.json
       UVICORN_HOST: 0.0.0.0
       UVICORN_PORT: "8000"
+      # Marzban 无 TLS 证书时强制只绑 127.0.0.1。给自签证书让它绑 0.0.0.0,
+      # relayhub 才能经内网 https://marzban:8000 访问 (verify 关闭)。
+      UVICORN_SSL_CERTFILE: /certs/marzban.crt
+      UVICORN_SSL_KEYFILE: /certs/marzban.key
+      UVICORN_SSL_CA_TYPE: private       # 允许自签证书 (默认只收受信 CA 证书)
+      XRAY_SUBSCRIPTION_URL_PREFIX: ${SUB_URL_PREFIX:-}   # 订阅链接公网前缀, 如 http://<IP>
     volumes:
       - marzban_data:/var/lib/marzban
-      - ./deploy/xray_config.json:/code/xray_config.json:ro
+      - ./deploy/xray_config.json:/code/xray_config.json   # 可写: Marzban 改配置(加客户outbound)时要写回
+      - ./deploy/certs:/certs:ro
     ports:
       - "443:443"                       # 代理入站, 对公网
-      - "127.0.0.1:8000:8000"           # 面板, 仅本地
+      - "127.0.0.1:8000:8000"           # 面板, 仅本地 (HTTPS 自签, 经 SSH 隧道访问)
 
   relayhub:
     build: ./relayhub
@@ -29,7 +36,7 @@ services:
     depends_on:
       - marzban
     environment:
-      RELAYHUB_MARZBAN_URL: http://marzban:8000     # 内网直连, 不走 TLS
+      RELAYHUB_MARZBAN_URL: https://marzban:8000    # 内网 HTTPS(自签), verify 关闭
       RELAYHUB_ADMIN_USER: ${MARZBAN_ADMIN_USER}
       RELAYHUB_ADMIN_PASS: ${MARZBAN_ADMIN_PASS}
       RELAYHUB_SHARED_INBOUND_TAG: VLESS_REALITY
@@ -48,5 +55,18 @@ services:
     ports:
       - "127.0.0.1:8080:8080"           # RelayHub 面板, 仅本地
 
+  # 仅暴露订阅 /sub/* 到公网, 面板不经此暴露
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on:
+      - marzban
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    ports:
+      - "80:80"                          # 订阅入口 (公网)
+
 volumes:
   marzban_data:
+  caddy_data:
