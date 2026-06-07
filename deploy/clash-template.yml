@@ -29,6 +29,12 @@ proxy-groups:
   tolerance: 50
   proxies:
   {{ proxy_remarks | yaml | indent(2) }}
+- name: 🤖 AI 服务
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  {{ proxy_remarks | yaml | indent(2) }}
 - name: 🌍 国外媒体
   type: select
   proxies:
@@ -96,16 +102,57 @@ rules:
 - DOMAIN-SUFFIX,googlesyndication.com,🛑 全球拦截
 - DOMAIN-SUFFIX,adnxs.com,🛑 全球拦截
 - DOMAIN-SUFFIX,cnzz.com,🛑 全球拦截
-# AI 服务 -> 代理
-- DOMAIN-KEYWORD,openai,🌍 国外媒体
-- DOMAIN-KEYWORD,claude,🌍 国外媒体
-- DOMAIN-KEYWORD,anthropic,🌍 国外媒体
-- DOMAIN-SUFFIX,chatgpt.com,🌍 国外媒体
-- DOMAIN-SUFFIX,claude.ai,🌍 国外媒体
-- DOMAIN-SUFFIX,gemini.google.com,🌍 国外媒体
-- DOMAIN-SUFFIX,x.ai,🌍 国外媒体
-- DOMAIN-SUFFIX,perplexity.ai,🌍 国外媒体
-- DOMAIN-SUFFIX,cursor.com,🌍 国外媒体
+# ===== AI 服务 -> 独立分组 (residential IP 跑 AI 最稳) =====
+- DOMAIN-KEYWORD,openai,🤖 AI 服务
+- DOMAIN-KEYWORD,chatgpt,🤖 AI 服务
+- DOMAIN-KEYWORD,claude,🤖 AI 服务
+- DOMAIN-KEYWORD,anthropic,🤖 AI 服务
+# OpenAI / ChatGPT / Sora
+- DOMAIN-SUFFIX,openai.com,🤖 AI 服务
+- DOMAIN-SUFFIX,chatgpt.com,🤖 AI 服务
+- DOMAIN-SUFFIX,oaistatic.com,🤖 AI 服务
+- DOMAIN-SUFFIX,oaiusercontent.com,🤖 AI 服务
+- DOMAIN-SUFFIX,openaiapi-site.azureedge.net,🤖 AI 服务
+- DOMAIN-SUFFIX,sora.com,🤖 AI 服务
+- DOMAIN-SUFFIX,ai.com,🤖 AI 服务
+- DOMAIN-SUFFIX,arkoselabs.com,🤖 AI 服务
+- DOMAIN-SUFFIX,challenges.cloudflare.com,🤖 AI 服务
+- DOMAIN-SUFFIX,featuregates.org,🤖 AI 服务
+- DOMAIN-SUFFIX,statsigapi.net,🤖 AI 服务
+- DOMAIN-SUFFIX,auth0.com,🤖 AI 服务
+- DOMAIN-SUFFIX,intercom.io,🤖 AI 服务
+- DOMAIN-SUFFIX,intercomcdn.com,🤖 AI 服务
+# Claude / Anthropic
+- DOMAIN-SUFFIX,claude.ai,🤖 AI 服务
+- DOMAIN-SUFFIX,claude.com,🤖 AI 服务
+- DOMAIN-SUFFIX,anthropic.com,🤖 AI 服务
+- DOMAIN-SUFFIX,claudeusercontent.com,🤖 AI 服务
+# Google Gemini / AI Studio
+- DOMAIN-SUFFIX,gemini.google.com,🤖 AI 服务
+- DOMAIN-SUFFIX,bard.google.com,🤖 AI 服务
+- DOMAIN-SUFFIX,aistudio.google.com,🤖 AI 服务
+- DOMAIN-SUFFIX,makersuite.google.com,🤖 AI 服务
+- DOMAIN-SUFFIX,generativelanguage.googleapis.com,🤖 AI 服务
+- DOMAIN-SUFFIX,ai.google.dev,🤖 AI 服务
+- DOMAIN-SUFFIX,deepmind.google,🤖 AI 服务
+- DOMAIN,notebooklm.google.com,🤖 AI 服务
+# xAI / Grok
+- DOMAIN-SUFFIX,x.ai,🤖 AI 服务
+- DOMAIN-SUFFIX,grok.com,🤖 AI 服务
+# Microsoft Copilot / GitHub Copilot
+- DOMAIN-SUFFIX,copilot.microsoft.com,🤖 AI 服务
+- DOMAIN-SUFFIX,githubcopilot.com,🤖 AI 服务
+- DOMAIN,copilot-proxy.githubusercontent.com,🤖 AI 服务
+# 其它 AI
+- DOMAIN-SUFFIX,perplexity.ai,🤖 AI 服务
+- DOMAIN-SUFFIX,mistral.ai,🤖 AI 服务
+- DOMAIN-SUFFIX,meta.ai,🤖 AI 服务
+- DOMAIN-SUFFIX,poe.com,🤖 AI 服务
+- DOMAIN-SUFFIX,midjourney.com,🤖 AI 服务
+- DOMAIN-SUFFIX,huggingface.co,🤖 AI 服务
+- DOMAIN-SUFFIX,groq.com,🤖 AI 服务
+- DOMAIN-SUFFIX,cursor.com,🤖 AI 服务
+- DOMAIN-SUFFIX,cursor.sh,🤖 AI 服务
 # 电报
 - DOMAIN-SUFFIX,t.me,📲 电报信息
 - DOMAIN-SUFFIX,telegram.org,📲 电报信息
