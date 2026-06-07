@@ -1,0 +1,162 @@
+mixed-port: 7890
+allow-lan: true
+mode: Rule
+log-level: info
+external-controller: :9090
+dns:
+  enable: true
+  enhanced-mode: fake-ip
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - 8.8.8.8
+    - 1.1.1.1
+
+{{ conf | except("proxy-groups", "port", "mixed-port", "mode", "rules", "dns") | yaml }}
+
+proxy-groups:
+- name: 🚀 节点选择
+  type: select
+  proxies:
+  - ♻️ 自动选择
+  - 🎯 全球直连
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: ♻️ 自动选择
+  type: url-test
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+  proxies:
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: 🌍 国外媒体
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🎯 全球直连
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: 📲 电报信息
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - 🎯 全球直连
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: Ⓜ️ 微软服务
+  type: select
+  proxies:
+  - 🎯 全球直连
+  - 🚀 节点选择
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: 🍎 苹果服务
+  type: select
+  proxies:
+  - 🎯 全球直连
+  - 🚀 节点选择
+  {{ proxy_remarks | yaml | indent(2) }}
+- name: 🎯 全球直连
+  type: select
+  proxies:
+  - DIRECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+- name: 🛑 全球拦截
+  type: select
+  proxies:
+  - REJECT
+  - DIRECT
+- name: 🐟 漏网之鱼
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - 🎯 全球直连
+  - ♻️ 自动选择
+  {{ proxy_remarks | yaml | indent(2) }}
+
+rules:
+# 局域网 / 私网直连
+- DOMAIN-SUFFIX,local,🎯 全球直连
+- IP-CIDR,127.0.0.0/8,🎯 全球直连,no-resolve
+- IP-CIDR,10.0.0.0/8,🎯 全球直连,no-resolve
+- IP-CIDR,172.16.0.0/12,🎯 全球直连,no-resolve
+- IP-CIDR,192.168.0.0/16,🎯 全球直连,no-resolve
+- IP-CIDR,100.64.0.0/10,🎯 全球直连,no-resolve
+- IP-CIDR,169.254.0.0/16,🎯 全球直连,no-resolve
+# 广告拦截
+- DOMAIN-KEYWORD,admarvel,🛑 全球拦截
+- DOMAIN-KEYWORD,admaster,🛑 全球拦截
+- DOMAIN-KEYWORD,adsage,🛑 全球拦截
+- DOMAIN-KEYWORD,adsmogo,🛑 全球拦截
+- DOMAIN-KEYWORD,adsserving,🛑 全球拦截
+- DOMAIN-KEYWORD,appsflyer,🛑 全球拦截
+- DOMAIN-KEYWORD,domob,🛑 全球拦截
+- DOMAIN-KEYWORD,umeng,🛑 全球拦截
+- DOMAIN-SUFFIX,doubleclick.net,🛑 全球拦截
+- DOMAIN-SUFFIX,googleadservices.com,🛑 全球拦截
+- DOMAIN-SUFFIX,googlesyndication.com,🛑 全球拦截
+- DOMAIN-SUFFIX,adnxs.com,🛑 全球拦截
+- DOMAIN-SUFFIX,cnzz.com,🛑 全球拦截
+# AI 服务 -> 代理
+- DOMAIN-KEYWORD,openai,🌍 国外媒体
+- DOMAIN-KEYWORD,claude,🌍 国外媒体
+- DOMAIN-KEYWORD,anthropic,🌍 国外媒体
+- DOMAIN-SUFFIX,chatgpt.com,🌍 国外媒体
+- DOMAIN-SUFFIX,claude.ai,🌍 国外媒体
+- DOMAIN-SUFFIX,gemini.google.com,🌍 国外媒体
+- DOMAIN-SUFFIX,x.ai,🌍 国外媒体
+- DOMAIN-SUFFIX,perplexity.ai,🌍 国外媒体
+- DOMAIN-SUFFIX,cursor.com,🌍 国外媒体
+# 电报
+- DOMAIN-SUFFIX,t.me,📲 电报信息
+- DOMAIN-SUFFIX,telegram.org,📲 电报信息
+- DOMAIN-SUFFIX,telegram.me,📲 电报信息
+- DOMAIN-SUFFIX,telegra.ph,📲 电报信息
+- IP-CIDR,91.108.0.0/16,📲 电报信息,no-resolve
+- IP-CIDR,149.154.160.0/20,📲 电报信息,no-resolve
+# 国外社交/媒体 -> 代理
+- DOMAIN-KEYWORD,google,🚀 节点选择
+- DOMAIN-KEYWORD,youtube,🌍 国外媒体
+- DOMAIN-KEYWORD,facebook,🚀 节点选择
+- DOMAIN-KEYWORD,twitter,🚀 节点选择
+- DOMAIN-KEYWORD,instagram,🚀 节点选择
+- DOMAIN-KEYWORD,github,🚀 节点选择
+- DOMAIN-KEYWORD,whatsapp,🚀 节点选择
+- DOMAIN-SUFFIX,x.com,🚀 节点选择
+- DOMAIN-SUFFIX,reddit.com,🚀 节点选择
+- DOMAIN-SUFFIX,netflix.com,🌍 国外媒体
+- DOMAIN-SUFFIX,nflxvideo.net,🌍 国外媒体
+- DOMAIN-SUFFIX,disneyplus.com,🌍 国外媒体
+- DOMAIN-SUFFIX,spotify.com,🌍 国外媒体
+- DOMAIN-SUFFIX,twitch.tv,🌍 国外媒体
+- DOMAIN-SUFFIX,googlevideo.com,🌍 国外媒体
+- DOMAIN-SUFFIX,ytimg.com,🌍 国外媒体
+- DOMAIN-SUFFIX,wikipedia.org,🚀 节点选择
+- DOMAIN-SUFFIX,bbc.com,🚀 节点选择
+- DOMAIN-SUFFIX,discord.com,🚀 节点选择
+- DOMAIN-SUFFIX,docker.com,🚀 节点选择
+- DOMAIN-SUFFIX,docker.io,🚀 节点选择
+# 微软
+- DOMAIN-KEYWORD,microsoft,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,bing.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,live.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,office.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,windows.net,Ⓜ️ 微软服务
+# 苹果
+- DOMAIN-SUFFIX,apple.com,🍎 苹果服务
+- DOMAIN-SUFFIX,icloud.com,🍎 苹果服务
+- DOMAIN-SUFFIX,mzstatic.com,🍎 苹果服务
+# 国内常见直连 (兜底交给 GEOIP)
+- DOMAIN-SUFFIX,cn,🎯 全球直连
+- DOMAIN-KEYWORD,baidu,🎯 全球直连
+- DOMAIN-KEYWORD,bilibili,🎯 全球直连
+- DOMAIN-KEYWORD,alicdn,🎯 全球直连
+- DOMAIN-KEYWORD,taobao,🎯 全球直连
+- DOMAIN-KEYWORD,tmall,🎯 全球直连
+- DOMAIN-KEYWORD,jd.com,🎯 全球直连
+- DOMAIN-KEYWORD,qq.com,🎯 全球直连
+- DOMAIN-KEYWORD,weixin,🎯 全球直连
+- DOMAIN-SUFFIX,bytedance.com,🎯 全球直连
+- DOMAIN-SUFFIX,douyin.com,🎯 全球直连
+# GEOIP 中国直连, 其余走代理
+- GEOIP,CN,🎯 全球直连
+- MATCH,🐟 漏网之鱼
