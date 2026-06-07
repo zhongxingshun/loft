@@ -20,7 +20,7 @@ proxy-groups:
   type: select
   proxies:
   - ♻️ 自动选择
-  - 🎯 全球直连
+  - DIRECT
   {{ proxy_remarks | yaml | indent(2) }}
 - name: ♻️ 自动选择
   type: url-test
