@@ -39,7 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[OK] 安全护栏已置顶 | {result.out_tag} -> {result.exit}")
     print(f"[OK] 用户 {result.name} 已开通 "
           f"(有效期: {'不限' if result.expire_days is None else str(result.expire_days)+'天'})")
-    print(f"[OK] 路由匹配键 (多候选): {', '.join(result.match_keys)}")
+    print(f"[OK] 路由匹配键: {', '.join(result.match_keys)}")
+    print("[OK] 已触发 core 重启注入新用户")
     print(f"\n订阅链接 (clash/v2ray 通用):\n{result.sub_url}\n")
     print("提示: 客户连上产生流量后, 跑 `python -m scripts.verify_routing` 核验分流是否命中。")
     return 0

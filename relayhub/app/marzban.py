@@ -66,6 +66,10 @@ class MarzbanClient:
     def put_core_config(self, cfg: dict) -> None:
         self._ok(self._req("PUT", "/api/core/config", json=cfg))
 
+    def restart_core(self) -> None:
+        """重启 Xray 核心 (全量重生成配置, 注入新增/移除用户)。轻量, 不重启容器。"""
+        self._ok(self._req("POST", "/api/core/restart"))
+
     # ---- user ----
     def upsert_user(self, body: dict) -> dict:
         r = self._req("POST", "/api/user", json=body)

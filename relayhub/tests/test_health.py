@@ -21,6 +21,9 @@ class FakeMarzban:
         self.users[body["username"]] = body
         return {"username": body["username"], "subscription_url": "/sub/x"}
 
+    def restart_core(self):
+        pass
+
 
 def fake_probe(ep: SocksEndpoint) -> HealthResult:
     if ep.address.startswith("9."):                 # 约定 9.x 为坏线路

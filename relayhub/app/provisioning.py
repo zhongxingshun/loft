@@ -16,14 +16,15 @@ from .parsing import parse_socks
 _GB = 1024 ** 3
 
 
-def email_candidates(name: str, inbound_tag: str) -> list[str]:
-    """路由 user 字段的多候选 email, 兼容不同 Marzban 版本的 email 格式。
+def email_candidates(name: str, inbound_tag: str, id_range: int = 1000) -> list[str]:
+    """路由 user 字段的多候选 email, 覆盖 Marzban 的 email 格式。
 
-    覆盖最常见两种: 纯用户名、用户名@inbound。Xray 对 user 列表做 OR 匹配,
-    任一命中即生效。若实际为带内部 id 前缀的格式 (无法预测), 由 verify_routing
-    诊断暴露真实 email 后再补。
+    Marzban 实测 email 形如 {id}.{username} (如 1.user1), id 由 API 取不到。
+    用户名唯一, 故枚举 {1..id_range}.{username} 必命中且不会误匹配其它用户。
+    另保留纯用户名、用户名@inbound 以兼容其它版本。Xray 对 user 列表做 OR 匹配。
     """
     cands = [name, f"{name}@{inbound_tag}"]
+    cands += [f"{i}.{name}" for i in range(1, id_range + 1)]
     seen: set[str] = set()
     out: list[str] = []
     for c in cands:
@@ -67,13 +68,16 @@ class ProvisioningService:
             self.client.put_core_config(cfg)     # 失败即抛, 不建用户 (无半成品)
 
         user = self.client.upsert_user(self._user_body(spec))
+        # 关键: Marzban 不会把新用户即时注入到 XRAY_JSON 入站, 必须触发 core 重启 (轻量, ~数秒)
+        self.client.restart_core()
         return ProvisionResult(
             name=spec.name,
             sub_url=self._abs_sub(user.get("subscription_url", "")),
             exit=sock.label,
             out_tag=out_tag,
             expire_days=None if spec.days == 0 else spec.days,
-            match_keys=email_candidates(spec.name, self.s.shared_inbound_tag),
+            match_keys=[spec.name, f"{spec.name}@{self.s.shared_inbound_tag}",
+                        f"{{1..{self.s.routing_id_range}}}.{spec.name}"],
         )
 
     # ---- 初始化: 确保安全护栏就位 (部署 bootstrap 用, 无客户时也生效) ----
@@ -101,6 +105,7 @@ class ProvisioningService:
             ]
             self.client.put_core_config(cfg)
         self.client.delete_user(name)
+        self.client.restart_core()       # 让删除即时生效 (de-inject)
 
     # ---- 吊销并重置订阅 (SEC-6) ----
     def rotate_sub(self, name: str) -> str:
@@ -181,7 +186,7 @@ def block_then_customer(rules: list[dict], name: str, out_tag: str, s: Settings)
     g = guard.block_rules(s.local_ip, s.block_smtp, s.block_bittorrent)
     customer_rule = {
         "type": "field",
-        "user": email_candidates(name, s.shared_inbound_tag),
+        "user": email_candidates(name, s.shared_inbound_tag, s.routing_id_range),
         "outboundTag": out_tag,
     }
     return guard.reorder_rules(rules, customer_rule, out_tag, g)

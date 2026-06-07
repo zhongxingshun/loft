@@ -15,6 +15,10 @@ class FakeMarzban:
         self.cfg = cfg or {"outbounds": [], "routing": {"rules": []}}
         self.users: dict[str, dict] = {}
         self.deleted: list[str] = []
+        self.restarts = 0
+
+    def restart_core(self):
+        self.restarts += 1
 
     def get_core_config(self):
         return copy.deepcopy(self.cfg)
@@ -69,16 +73,23 @@ def test_provision_writes_guard_on_top(svc, settings):
     assert rules[: len(guard)] == guard                     # 护栏置顶
     crule = rules[len(guard)]
     assert crule["outboundTag"] == "out-zhang"              # 客户规则紧随其后
-    # 多候选 email 匹配: 同时含纯用户名与 用户名@inbound
+    # 多候选 email 匹配: 含纯用户名、用户名@inbound、以及 {id}.用户名 区间
     assert "zhang" in crule["user"]
     assert "zhang@VLESS_REALITY" in crule["user"]
+    assert "1.zhang" in crule["user"]                       # Marzban 实际格式 {id}.{name}
     # blackhole 出站已就位
     assert any(o.get("tag") == "block" for o in svc.client.cfg["outbounds"])
 
 
+def test_provision_triggers_core_restart(svc):
+    svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
+    assert svc.client.restarts == 1                         # 注入新用户需 core 重启
+
+
 def test_provision_result_exposes_match_keys(svc):
     r = svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
-    assert r.match_keys == ["zhang", "zhang@VLESS_REALITY"]
+    assert r.match_keys[:2] == ["zhang", "zhang@VLESS_REALITY"]
+    assert "1000" in r.match_keys[2]                        # {1..1000}.zhang 提示
 
 
 def test_security_regression_guard_stays_on_top_with_preexisting_rules(settings):

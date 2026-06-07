@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     shared_inbound_protocol: str = "vless"      # vless / vmess / trojan
     verify_tls: bool = True                     # 自签证书改 False
 
+    # Marzban 的 xray email 形如 {id}.{username} (如 1.user1)。id 由 API 取不到,
+    # 故路由 user 候选里枚举 {1..routing_id_range}.{username} 全覆盖 (用户名唯一, 不会误匹配)。
+    # 系统生命周期内累计开通+删除用户数若可能超过此值, 调大它。
+    routing_id_range: int = 1000
+
     # ---- 出站安全护栏 (SEC-5) ----
     local_ip: str = ""                          # 本机公网 IP, 防客户回打面板/SSH
     block_smtp: bool = True                     # 封出站 25 端口
