@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 from .alerts import AlertService
@@ -80,6 +81,15 @@ async def _marzban_err(_, exc: MarzbanError):
 @app.exception_handler(ValueError)
 async def _value_err(_, exc: ValueError):
     return _err(400, str(exc))
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_err(_, exc: RequestValidationError):
+    for e in exc.errors():
+        if "name" in e.get("loc", []):
+            return _err(422, "客户名只能用英文字母/数字/下划线, 长度 2-32 位 (不能用中文)")
+    return _err(422, "参数校验失败: " + "; ".join(
+        f"{'.'.join(str(x) for x in e.get('loc', []))}: {e.get('msg', '')}" for e in exc.errors()))
 
 
 @app.get("/")
