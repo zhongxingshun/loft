@@ -34,7 +34,8 @@ services:
       - ./deploy/clash-template.yml:/code/custom-templates/clash/default.yml:ro
     ports:
       - "443:443"                       # 代理入站, 对公网
-      - "127.0.0.1:8000:8000"           # 面板, 仅本地 (HTTPS 自签, 经 SSH 隧道访问)
+      # 面板默认仅本地(SSH隧道); 设 PANEL_HOST=0.0.0.0 则公网开放(自带登录, 强密码)
+      - "${PANEL_HOST:-127.0.0.1}:8000:8000"
 
   relayhub:
     build: ./relayhub
