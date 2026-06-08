@@ -70,6 +70,13 @@ class MarzbanClient:
         """重启 Xray 核心 (全量重生成配置, 注入新增/移除用户)。轻量, 不重启容器。"""
         self._ok(self._req("POST", "/api/core/restart"))
 
+    # ---- 订阅节点显示名 (host remark) ----
+    def get_hosts(self) -> dict:
+        return self._ok(self._req("GET", "/api/hosts"))
+
+    def put_hosts(self, hosts: dict) -> None:
+        self._ok(self._req("PUT", "/api/hosts", json=hosts))
+
     # ---- user ----
     def upsert_user(self, body: dict) -> dict:
         r = self._req("POST", "/api/user", json=body)

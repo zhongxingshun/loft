@@ -37,6 +37,21 @@ def main() -> int:
     svc.ensure_guard()
     eps = svc.line_endpoints()
     print(f"[bootstrap] 安全护栏已就位 (私网/本机/25端口拦截); 现有线路 {len(eps)} 条")
+
+    # 统一订阅节点显示名 (去掉默认的 "Marz [VLESS-tcp]" 丑名)
+    try:
+        hosts = client.get_hosts()
+        changed = False
+        for lst in hosts.values():
+            for h in lst:
+                if h.get("remark") != s.sub_node_remark:
+                    h["remark"] = s.sub_node_remark
+                    changed = True
+        if changed:
+            client.put_hosts(hosts)
+            print(f"[bootstrap] 节点显示名已设为: {s.sub_node_remark}")
+    except MarzbanError as e:
+        print(f"[bootstrap] 设置节点名失败(忽略): {str(e)[:60]}")
     return 0
 
 

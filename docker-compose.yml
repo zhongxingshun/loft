@@ -27,6 +27,7 @@ services:
       # 自定义 Clash/Meta 订阅模板 (带完整分流规则: 国内直连/国外走代理/广告拦截)
       CUSTOM_TEMPLATES_DIRECTORY: /code/custom-templates/
       CLASH_SUBSCRIPTION_TEMPLATE: clash/default.yml
+      SUB_PROFILE_TITLE: ${SUB_PROFILE_TITLE:-高速公路}    # 订阅显示名
     volumes:
       - marzban_data:/var/lib/marzban
       - ./deploy/xray_config.json:/code/xray_config.json   # 可写: Marzban 改配置(加客户outbound)时要写回
