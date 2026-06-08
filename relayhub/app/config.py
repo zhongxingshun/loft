@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     shared_inbound_protocol: str = "vless"      # vless / vmess / trojan
     verify_tls: bool = True                     # 自签证书改 False
 
+    # ---- RelayHub 面板登录 (公网开放时用; 留空=不鉴权, 仅本地隧道场景) ----
+    panel_user: str = "admin"
+    panel_password: str = ""
+
     # Marzban 的 xray email 形如 {id}.{username} (如 1.user1)。id 由 API 取不到,
     # 故路由 user 候选里枚举 {1..routing_id_range}.{username} 全覆盖 (用户名唯一, 不会误匹配)。
     # 系统生命周期内累计开通+删除用户数若可能超过此值, 调大它。

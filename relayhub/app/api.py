@@ -4,12 +4,14 @@
 """
 from __future__ import annotations
 
+import base64
+import secrets
 import threading
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from .alerts import AlertService
 from .config import load_settings
@@ -42,6 +44,26 @@ def _alert_loop():
 def _start_scheduler():
     if _settings.alert_interval_min > 0 and _notifier.enabled:
         threading.Thread(target=_alert_loop, daemon=True).start()
+
+
+@app.middleware("http")
+async def _basic_auth(request: Request, call_next):
+    """面板登录鉴权: 配了 panel_password 才启用 (公网开放时必配)。"""
+    pw = _settings.panel_password
+    if pw:
+        hdr = request.headers.get("authorization", "")
+        ok = False
+        if hdr.startswith("Basic "):
+            try:
+                user, _, passwd = base64.b64decode(hdr[6:]).decode().partition(":")
+                ok = (secrets.compare_digest(user, _settings.panel_user)
+                      and secrets.compare_digest(passwd, pw))
+            except Exception:  # noqa: BLE001
+                ok = False
+        if not ok:
+            return Response(status_code=401,
+                            headers={"WWW-Authenticate": 'Basic realm="RelayHub"'})
+    return await call_next(request)
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 

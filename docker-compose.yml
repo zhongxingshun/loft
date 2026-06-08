@@ -59,8 +59,10 @@ services:
       RELAYHUB_ALERT_EXPIRE_DAYS: ${ALERT_EXPIRE_DAYS:-3}
       RELAYHUB_ALERT_TRAFFIC_PCT: ${ALERT_TRAFFIC_PCT:-90}
       RELAYHUB_ALERT_CHECK_HEALTH: ${ALERT_CHECK_HEALTH:-false}
+      RELAYHUB_PANEL_USER: ${RELAYHUB_PANEL_USER:-admin}
+      RELAYHUB_PANEL_PASSWORD: ${RELAYHUB_PANEL_PASSWORD:-}   # 公网开放必配, 否则只走隧道
     ports:
-      - "127.0.0.1:8080:8080"           # RelayHub 面板, 仅本地
+      - "127.0.0.1:8080:8080"           # RelayHub 面板, 仅本地 (公网经 Caddy :8443)
 
   # 仅暴露订阅 /sub/* 到公网, 面板不经此暴露
   caddy:
@@ -70,9 +72,11 @@ services:
       - marzban
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/certs:/certs:ro
       - caddy_data:/data
     ports:
       - "80:80"                          # 订阅入口 (公网)
+      - "8443:8443"                      # RelayHub 面板入口 (公网, TLS+鉴权)
 
 volumes:
   marzban_data:

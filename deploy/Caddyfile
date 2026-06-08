@@ -12,3 +12,10 @@
 		respond "Not Found" 404
 	}
 }
+
+# RelayHub 开通面板公网入口 (自签证书 + 应用层 Basic Auth)。
+# 端口 8443, 浏览器 https://<IP>:8443 访问 (自签, 点继续)。
+:8443 {
+	tls /certs/marzban.crt /certs/marzban.key
+	reverse_proxy relayhub:8080
+}
