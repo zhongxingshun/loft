@@ -10,6 +10,7 @@ import time
 
 from . import guard
 from .config import Settings
+from .marzban import MarzbanError
 from .models import CustomerView, LineSpec, ProvisionResult, SocksEndpoint
 from .parsing import parse_socks
 
@@ -53,6 +54,14 @@ class ProvisioningService:
         out_tag = f"out-{spec.name}"
         exit_ip = (spec.exit_ip or "").strip() or None   # 手填的出口 IP, 显示在节点名
 
+        # 复用已存在用户的 UUID: 换线路/重开同名客户时 uuid 不变, 客户端订阅无需重导
+        existing_id = None
+        try:
+            eu = self.client.get_user(spec.name)
+            existing_id = (eu.get("proxies", {}).get(self.s.shared_inbound_protocol) or {}).get("id")
+        except MarzbanError:
+            pass
+
         with self._lock:                         # core config 读-改-写串行化
             cfg = self.client.get_core_config()
             cfg.setdefault("outbounds", [])
@@ -68,7 +77,7 @@ class ProvisioningService:
 
             self.client.put_core_config(cfg)     # 失败即抛, 不建用户 (无半成品)
 
-        user = self.client.upsert_user(self._user_body(spec, exit_ip))
+        user = self.client.upsert_user(self._user_body(spec, exit_ip, existing_id))
         # 关键: Marzban 不会把新用户即时注入到 XRAY_JSON 入站, 必须触发 core 重启 (轻量, ~数秒)
         self.client.restart_core()
         return ProvisionResult(
@@ -106,7 +115,10 @@ class ProvisioningService:
                 r for r in rules if r.get("outboundTag") != out_tag
             ]
             self.client.put_core_config(cfg)
-        self.client.delete_user(name)
+        try:
+            self.client.delete_user(name)
+        except MarzbanError:
+            pass        # Marzban 删用户偶发 500 (其自身 report bug), 多数已删除, 忽略
         self.client.restart_core()       # 让删除即时生效 (de-inject)
 
     # ---- 吊销并重置订阅 (SEC-6) ----
@@ -140,12 +152,13 @@ class ProvisioningService:
         return out
 
     # ---- 内部 ----
-    def _user_body(self, spec: LineSpec, exit_ip: str | None = None) -> dict:
+    def _user_body(self, spec: LineSpec, exit_ip: str | None = None,
+                   existing_id: str | None = None) -> dict:
         proto = self.s.shared_inbound_protocol
         expire = 0 if spec.days == 0 else int(time.time()) + spec.days * 86400
         body = {
             "username": spec.name,
-            "proxies": {proto: {}},
+            "proxies": {proto: ({"id": existing_id} if existing_id else {})},
             "inbounds": {proto: [self.s.shared_inbound_tag]},
             "expire": expire,
             "data_limit": int(spec.gb * _GB),

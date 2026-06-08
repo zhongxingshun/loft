@@ -21,6 +21,12 @@ class FakeMarzban:
         self.users[body["username"]] = body
         return {"username": body["username"], "subscription_url": "/sub/x"}
 
+    def get_user(self, name):
+        from app.marzban import MarzbanError
+        if name in self.users:
+            return self.users[name]
+        raise MarzbanError("not found")
+
     def restart_core(self):
         pass
 

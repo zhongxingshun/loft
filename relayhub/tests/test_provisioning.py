@@ -4,6 +4,7 @@ import pytest
 
 from app.config import Settings
 from app.guard import block_rules
+from app.marzban import MarzbanError
 from app.models import LineSpec
 from app.provisioning import ProvisioningService
 
@@ -27,9 +28,21 @@ class FakeMarzban:
         self.cfg = copy.deepcopy(cfg)
 
     def upsert_user(self, body):
+        proto = next(iter(body["proxies"]))
+        pid = (body["proxies"][proto] or {}).get("id")
+        if not pid:                                  # 模拟 Marzban 生成 uuid
+            self._uuid_ctr = getattr(self, "_uuid_ctr", 0) + 1
+            pid = f"uuid{self._uuid_ctr}"
+        body = copy.deepcopy(body)
+        body["proxies"] = {proto: {"id": pid}}
         self.users[body["username"]] = body
         return {"username": body["username"],
                 "subscription_url": f"/sub/{body['username']}TOKEN"}
+
+    def get_user(self, name):
+        if name in self.users:
+            return self.users[name]
+        raise MarzbanError("user not found")
 
     def list_users(self):
         return [{"username": n, "status": "active", "used_traffic": 0,
@@ -84,6 +97,20 @@ def test_provision_writes_guard_on_top(svc, settings):
 def test_provision_triggers_core_restart(svc):
     svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
     assert svc.client.restarts == 1                         # 注入新用户需 core 重启
+
+
+def test_reprovision_preserves_uuid(svc):
+    """换线路/重开同名客户, uuid 不变 (客户端订阅无需重导)。"""
+    svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080"))
+    uuid1 = svc.client.users["zhang"]["proxies"]["vless"]["id"]
+    svc.provision(LineSpec(name="zhang", line="5.6.7.8:9090"))   # 换线路
+    uuid2 = svc.client.users["zhang"]["proxies"]["vless"]["id"]
+    assert uuid1 == uuid2 and uuid1
+
+
+def test_provision_stores_exit_ip_note(svc):
+    svc.provision(LineSpec(name="zhang", line="1.2.3.4:8080", exit_ip="9.9.9.9"))
+    assert svc.client.users["zhang"].get("note") == "exit_ip=9.9.9.9"
 
 
 def test_provision_result_exposes_match_keys(svc):
