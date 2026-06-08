@@ -144,7 +144,9 @@ def subscription(token: str, request: Request):
                 try:
                     info = cli.get(f"{base}/sub/{token}/info",
                                    headers={"user-agent": ua}).json()
-                    mip = re.search(r"exit_ip=([0-9.]+)", info.get("note") or "")
+                    username = info.get("username")
+                    note = _service.client.get_user(username).get("note") or "" if username else ""
+                    mip = re.search(r"exit_ip=([0-9.]+)", note)
                     if mip:
                         body = _inject_exit_ip(body, mip.group(1))
                 except Exception:  # noqa: BLE001
