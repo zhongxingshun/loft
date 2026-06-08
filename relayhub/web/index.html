@@ -123,6 +123,8 @@
         <div class="field"><label>有效期（天）</label><input id="i-days" value="30"></div>
         <div class="field"><label>流量上限（GB，0=不限）</label><input id="i-gb" value="0"></div>
       </div>
+      <div class="field"><label>出口 IP <span style="color:var(--muted)">（可选，填了会显示在节点名上）</span></label>
+        <input id="i-exit-ip" placeholder="例如 9.142.76.61"></div>
       <div class="err" id="form-err"></div>
       <div class="foot"><button class="btn ghost" onclick="closeModal()">取消</button>
         <button class="btn" id="submit-btn" onclick="submitLine()">开通并生成订阅</button></div>
@@ -256,7 +258,7 @@ function backToForm(){
   document.getElementById('form').classList.remove('hide');
   document.getElementById('result').classList.remove('show');
   document.getElementById('form-err').textContent='';
-  ['i-name','i-line'].forEach(id=>document.getElementById(id).value='');
+  ['i-name','i-line','i-exit-ip'].forEach(id=>document.getElementById(id).value='');
 }
 
 async function submitLine(){
@@ -264,6 +266,7 @@ async function submitLine(){
   const line=document.getElementById('i-line').value.trim();
   const days=parseInt(document.getElementById('i-days').value||'30',10);
   const gb=parseFloat(document.getElementById('i-gb').value||'0');
+  const exit_ip=document.getElementById('i-exit-ip').value.trim();
   const err=document.getElementById('form-err'); err.textContent='';
   if(!name||!line){ err.textContent='请填写客户名与线路串'; return; }
   const btn=document.getElementById('submit-btn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> 开通中…';
@@ -272,7 +275,7 @@ async function submitLine(){
     if(DEMO){ await new Promise(r=>setTimeout(r,500));
       res={name, sub_url:"https://demo.example.com/sub/"+Math.random().toString(36).slice(2,12),
         exit:line.split(':').slice(0,2).join(':'), out_tag:"out-"+name, expire_days:days||null}; }
-    else { res = await api("/api/lines", {method:"POST", body:JSON.stringify({name,line,days,gb})}); }
+    else { res = await api("/api/lines", {method:"POST", body:JSON.stringify({name,line,days,gb,exit_ip})}); }
     showResult(res);
     if(!DEMO) load();
   }catch(e){ err.textContent = "开通失败：" + e.message; }

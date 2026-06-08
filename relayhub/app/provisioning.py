@@ -51,6 +51,7 @@ class ProvisioningService:
     def provision(self, spec: LineSpec) -> ProvisionResult:
         sock = parse_socks(spec.line)            # 非法线路串先抛, 不触网
         out_tag = f"out-{spec.name}"
+        exit_ip = (spec.exit_ip or "").strip() or None   # 手填的出口 IP, 显示在节点名
 
         with self._lock:                         # core config 读-改-写串行化
             cfg = self.client.get_core_config()
@@ -67,7 +68,7 @@ class ProvisioningService:
 
             self.client.put_core_config(cfg)     # 失败即抛, 不建用户 (无半成品)
 
-        user = self.client.upsert_user(self._user_body(spec))
+        user = self.client.upsert_user(self._user_body(spec, exit_ip))
         # 关键: Marzban 不会把新用户即时注入到 XRAY_JSON 入站, 必须触发 core 重启 (轻量, ~数秒)
         self.client.restart_core()
         return ProvisionResult(
@@ -78,6 +79,7 @@ class ProvisioningService:
             expire_days=None if spec.days == 0 else spec.days,
             match_keys=[spec.name, f"{spec.name}@{self.s.shared_inbound_tag}",
                         f"{{1..{self.s.routing_id_range}}}.{spec.name}"],
+            exit_ip=exit_ip,
         )
 
     # ---- 初始化: 确保安全护栏就位 (部署 bootstrap 用, 无客户时也生效) ----
@@ -138,10 +140,10 @@ class ProvisioningService:
         return out
 
     # ---- 内部 ----
-    def _user_body(self, spec: LineSpec) -> dict:
+    def _user_body(self, spec: LineSpec, exit_ip: str | None = None) -> dict:
         proto = self.s.shared_inbound_protocol
         expire = 0 if spec.days == 0 else int(time.time()) + spec.days * 86400
-        return {
+        body = {
             "username": spec.name,
             "proxies": {proto: {}},
             "inbounds": {proto: [self.s.shared_inbound_tag]},
@@ -149,6 +151,9 @@ class ProvisioningService:
             "data_limit": int(spec.gb * _GB),
             "data_limit_reset_strategy": "no_reset",
         }
+        if exit_ip:
+            body["note"] = f"exit_ip={exit_ip}"   # 供订阅展示出口 IP
+        return body
 
     def _abs_sub(self, sub: str) -> str:
         if sub.startswith("/"):

@@ -24,6 +24,7 @@ class LineSpec(BaseModel):
     line: str                       # ip:port[:user:pass]
     days: int = 30                  # 0 = 不限
     gb: float = 0                   # 0 = 不限
+    exit_ip: Optional[str] = None   # 出口 IP (可选, 手填, 显示在节点名上)
 
 
 class ProvisionResult(BaseModel):
@@ -34,6 +35,7 @@ class ProvisionResult(BaseModel):
     out_tag: str
     expire_days: Optional[int] = None
     match_keys: list[str] = []      # 路由 user 多候选 (兼容不同 email 格式)
+    exit_ip: Optional[str] = None   # 开通时探测到的 decode 出口 IP
 
 
 class CustomerView(BaseModel):

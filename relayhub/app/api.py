@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import base64
+import re
 import secrets
 import threading
 import time
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -51,7 +53,7 @@ def _start_scheduler():
 async def _basic_auth(request: Request, call_next):
     """面板登录鉴权: 配了 panel_password 才启用 (公网开放时必配)。"""
     pw = _settings.panel_password
-    if pw:
+    if pw and not request.url.path.startswith("/sub"):   # 订阅必须公开, 豁免鉴权
         hdr = request.headers.get("authorization", "")
         ok = False
         if hdr.startswith("Basic "):
@@ -98,6 +100,59 @@ def index():
     if not idx.exists():
         raise HTTPException(404, "index.html not found")
     return FileResponse(idx)
+
+
+_SUB_PASSTHRU_HEADERS = {
+    "profile-title", "profile-update-interval", "subscription-userinfo",
+    "content-disposition", "profile-web-page-url", "support-url",
+}
+
+
+def _inject_exit_ip(body: bytes, ip: str) -> bytes:
+    """把出口 IP 追加到 clash 节点名 (仅 proxies 段内的节点, 全局一致替换)。失败原样返回。"""
+    try:
+        text = body.decode("utf-8")
+        m = re.search(r"\nproxies:\s*\n(.*?)\n(?:proxy-groups|rules):", text, re.S)
+        if not m:
+            return body
+        names = re.findall(r"^\s*-?\s*name:\s*(.+?)\s*$", m.group(1), re.M)
+        for nm in names:
+            nm = nm.strip().strip('"').strip("'")
+            if nm and ip not in nm:
+                text = text.replace(nm, f"{nm} · {ip}")
+        return text.encode("utf-8")
+    except Exception:  # noqa: BLE001
+        return body
+
+
+@app.get("/sub/{token}")
+def subscription(token: str, request: Request):
+    """中转 Marzban 订阅, 并把开通时探测到的 decode 出口 IP 注入节点名。
+
+    任何环节出错都回落为 Marzban 原样输出, 不影响订阅可用性。
+    """
+    ua = request.headers.get("user-agent", "")
+    base = _settings.marzban_url.rstrip("/")
+    try:
+        with httpx.Client(verify=_settings.verify_tls, timeout=20.0) as cli:
+            r = cli.get(f"{base}/sub/{token}", headers={"user-agent": ua})
+            body = r.content
+            ctype = r.headers.get("content-type", "text/plain")
+            headers = {k: v for k, v in r.headers.items()
+                       if k.lower() in _SUB_PASSTHRU_HEADERS}
+            if b"proxies:" in body:                     # 仅 clash/meta 才尝试注入
+                try:
+                    info = cli.get(f"{base}/sub/{token}/info",
+                                   headers={"user-agent": ua}).json()
+                    mip = re.search(r"exit_ip=([0-9.]+)", info.get("note") or "")
+                    if mip:
+                        body = _inject_exit_ip(body, mip.group(1))
+                except Exception:  # noqa: BLE001
+                    pass
+            return Response(content=body, status_code=r.status_code,
+                            media_type=ctype, headers=headers)
+    except httpx.HTTPError:
+        raise HTTPException(502, "subscription upstream error")
 
 
 @app.post("/api/lines")

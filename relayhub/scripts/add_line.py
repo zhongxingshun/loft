@@ -24,13 +24,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("line", help="decode SOCKS5 线路串 ip:port[:user:pass]")
     ap.add_argument("--days", type=int, default=30, help="有效天数, 0=不限")
     ap.add_argument("--gb", type=float, default=0, help="流量上限GB, 0=不限")
+    ap.add_argument("--exit-ip", default=None, help="出口IP(可选), 显示在节点名上")
     args = ap.parse_args(argv)
 
     settings = load_settings()
     service = ProvisioningService(MarzbanClient(settings), settings)
 
     try:
-        spec = LineSpec(name=args.name, line=args.line, days=args.days, gb=args.gb)
+        spec = LineSpec(name=args.name, line=args.line, days=args.days, gb=args.gb,
+                        exit_ip=args.exit_ip)
         result = service.provision(spec)
     except (ValueError, MarzbanError) as e:
         print(f"[ERROR] {e}", file=sys.stderr)
