@@ -80,6 +80,8 @@ proxy-groups:
   {{ proxy_remarks | yaml | indent(2) }}
 
 rules:
+# 管理服务器自身走直连 (开 TUN 时也能 SSH/管理面板; 部署到别处时改成对应 IP)
+- IP-CIDR,23.252.105.218/32,🎯 全球直连,no-resolve
 # 局域网 / 私网直连
 - DOMAIN-SUFFIX,local,🎯 全球直连
 - IP-CIDR,127.0.0.0/8,🎯 全球直连,no-resolve
