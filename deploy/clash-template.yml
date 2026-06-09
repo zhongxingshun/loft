@@ -6,6 +6,63 @@ external-controller: :9090
 dns:
   enable: true
   enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  # 白名单: 这些域名不走假IP。否则连通性检测/局域网发现/实时音视频(UDP)拿到假IP会卡
+  fake-ip-filter:
+    # 局域网 / 投屏 / 智能家居 (mDNS 设备发现)
+    - '*.lan'
+    - '*.localdomain'
+    - '+.local'
+    - '+.home.arpa'
+    - '_dns.resolver.arpa'
+    # 微信 / QQ / 腾讯 (发图、语音、连通检测)
+    - '+.qq.com'
+    - '+.qpic.cn'
+    - '+.qlogo.cn'
+    - '+.wechat.com'
+    - '+.weixin.qq.com'
+    - '+.tencent.com'
+    - '+.gtimg.cn'
+    - 'localhost.ptlogin2.qq.com'
+    # 实时音视频 STUN/TURN (语音/视频通话、会议、游戏打洞)
+    - 'stun.*.*'
+    - 'stun.*.*.*'
+    - '+.stun.*.*'
+    - '+.turn.*.*'
+    # 网易云 / 米家 / 智能设备
+    - '+.music.163.com'
+    - '+.126.net'
+    - '+.market.xiaomi.com'
+    - '+.mi.com'
+    - '+.miui.com'
+    - '+.xiaomi.com'
+    # 苹果服务 (推送/连通检测/时间)
+    - 'courier.push.apple.com'
+    - 'captive.apple.com'
+    - 'time.*.apple.com'
+    - 'time-ios.apple.com'
+    - '+.push.apple.com'
+    # 系统联网检测 (Win/安卓/Chrome)
+    - '+.msftncsi.com'
+    - '+.msftconnecttest.com'
+    - 'connectivitycheck.platform.hicloud.com'
+    - 'connectivitycheck.gstatic.com'
+    - 'connect.rom.miui.com'
+    - 'wifi.vivo.com.cn'
+    # 时间同步 NTP
+    - 'time.*.com'
+    - 'time.*.gov'
+    - 'time.*.edu.cn'
+    - 'ntp.*.com'
+    - '+.pool.ntp.org'
+    - 'pool.ntp.org'
+    # 手游 / Steam / PSN (UDP 直连)
+    - '+.battlenet.com.cn'
+    - '+.blzstatic.cn'
+    - '+.battle.net'
+    - 'lens.l.google.com'
+    - 'safebrowsing.urlsec.qq.com'
+    - 'safebrowsing.googleapis.com'
   nameserver:
     - 223.5.5.5
     - 119.29.29.29
@@ -39,6 +96,8 @@ proxy-groups:
 rules:
 # 管理服务器自身直连 (开 TUN 也能 SSH/面板; 部署他处改这个 IP)
 - IP-CIDR,23.252.105.218/32,🎯 全球直连,no-resolve
+# 所有 SSH (22 端口) 直连, 不过代理
+- DST-PORT,22,🎯 全球直连
 # 局域网 / 私网直连
 - DOMAIN-SUFFIX,local,🎯 全球直连
 - IP-CIDR,127.0.0.0/8,🎯 全球直连,no-resolve
@@ -93,6 +152,17 @@ rules:
 - DOMAIN-SUFFIX,huggingface.co,🤖 AI 专线
 - DOMAIN-SUFFIX,cursor.com,🤖 AI 专线
 - DOMAIN-SUFFIX,cursor.sh,🤖 AI 专线
+# IP 检测站 -> 也走 AI 专线, 否则查到的是机场IP, 会误判
+- DOMAIN-SUFFIX,ping0.cc,🤖 AI 专线
+- DOMAIN-SUFFIX,net.coffee,🤖 AI 专线
+# 微信/腾讯 -> 直连 (发图/语音用 qpic/tc.qq.com, 强制直连防绕路卡顿)
+- DOMAIN-KEYWORD,wechat,🎯 全球直连
+- DOMAIN-KEYWORD,weixin,🎯 全球直连
+- DOMAIN-SUFFIX,qq.com,🎯 全球直连
+- DOMAIN-SUFFIX,qpic.cn,🎯 全球直连
+- DOMAIN-SUFFIX,qlogo.cn,🎯 全球直连
+- DOMAIN-SUFFIX,tencent.com,🎯 全球直连
+- DOMAIN-SUFFIX,gtimg.cn,🎯 全球直连
 # 国内直连
 - DOMAIN-SUFFIX,cn,🎯 全球直连
 - DOMAIN-KEYWORD,baidu,🎯 全球直连
