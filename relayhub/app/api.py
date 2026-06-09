@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import httpx
+import yaml
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -107,6 +108,64 @@ _SUB_PASSTHRU_HEADERS = {
     "content-disposition", "profile-web-page-url", "support-url",
 }
 
+# 大流量机场节点缓存 (避免每次订阅请求都拉机场)
+_highvol_cache: dict = {"t": 0.0, "proxies": []}
+_INFO_NODE_MARKERS = ("流量", "到期", "剩余", "过期", "重置", "官网", "网址",
+                      "客服", "订阅", "www.", "http", "telegram", "群组")
+
+
+def _is_real_node(name: str) -> bool:
+    return bool(name) and not any(m in name for m in _INFO_NODE_MARKERS)
+
+
+def _highvol_proxies() -> list:
+    """拉取大流量机场的节点 (缓存 30 分钟; 出错用旧缓存)。"""
+    url = _settings.highvol_sub_url
+    if not url:
+        return []
+    if time.time() - _highvol_cache["t"] < 1800 and _highvol_cache["proxies"]:
+        return _highvol_cache["proxies"]
+    try:
+        with httpx.Client(verify=False, timeout=20.0) as c:
+            r = c.get(url, headers={"user-agent": "clash.meta"})
+        d = yaml.safe_load(r.text)
+        ps = [p for p in (d.get("proxies") or []) if _is_real_node(p.get("name", ""))]
+        if ps:
+            _highvol_cache["t"] = time.time()
+            _highvol_cache["proxies"] = ps
+    except Exception:  # noqa: BLE001
+        pass
+    return _highvol_cache["proxies"]
+
+
+def _build_split_sub(text: str, exit_ip: str | None) -> bytes:
+    """把机场节点合并进 clash 订阅: AI专线=本节点(带出口IP), 大流量=机场节点。"""
+    d = yaml.safe_load(text)
+    our = d.get("proxies") or []
+    our_names = []
+    for p in our:                                     # 本节点名带上出口IP
+        nm = p.get("name", "")
+        if exit_ip and exit_ip not in nm:
+            nm = f"{nm} · {exit_ip}"
+            p["name"] = nm
+        our_names.append(nm)
+    air = _highvol_proxies()
+    air_names = [p.get("name") for p in air]
+    d["proxies"] = our + air
+    groups = d.get("proxy-groups") or []
+    auto = {"name": "🚀 大流量-自动", "type": "url-test",
+            "url": "http://www.gstatic.com/generate_204", "interval": 300,
+            "tolerance": 80, "proxies": air_names or ["DIRECT"]}
+    for g in groups:
+        if g.get("name") == "🤖 AI 专线":
+            g["proxies"] = our_names or ["DIRECT"]
+        elif g.get("name") == "🚀 大流量":
+            g["proxies"] = (["🚀 大流量-自动"] + air_names) if air_names else ["DIRECT"]
+    if air_names:
+        groups.insert(0, auto)
+    d["proxy-groups"] = groups
+    return yaml.dump(d, allow_unicode=True, sort_keys=False).encode("utf-8")
+
 
 def _inject_exit_ip(body: bytes, ip: str) -> bytes:
     """把出口 IP 追加到 clash 节点名 (仅 proxies 段内的节点, 全局一致替换)。失败原样返回。"""
@@ -140,15 +199,18 @@ def subscription(token: str, request: Request):
             ctype = r.headers.get("content-type", "text/plain")
             headers = {k: v for k, v in r.headers.items()
                        if k.lower() in _SUB_PASSTHRU_HEADERS}
-            if b"proxies:" in body:                     # 仅 clash/meta 才尝试注入
+            if b"proxies:" in body:                     # 仅 clash/meta 才处理
                 try:
                     info = cli.get(f"{base}/sub/{token}/info",
                                    headers={"user-agent": ua}).json()
                     username = info.get("username")
                     note = _service.client.get_user(username).get("note") or "" if username else ""
                     mip = re.search(r"exit_ip=([0-9.]+)", note)
-                    if mip:
-                        body = _inject_exit_ip(body, mip.group(1))
+                    exit_ip = mip.group(1) if mip else None
+                    if _settings.highvol_sub_url:        # 分流模式: 合并机场节点
+                        body = _build_split_sub(body.decode("utf-8", "ignore"), exit_ip)
+                    elif exit_ip:                        # 普通模式: 只注入出口IP
+                        body = _inject_exit_ip(body, exit_ip)
                 except Exception:  # noqa: BLE001
                     pass
             return Response(content=body, status_code=r.status_code,

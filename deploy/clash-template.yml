@@ -16,71 +16,28 @@ dns:
 {{ conf | except("proxy-groups", "port", "mixed-port", "mode", "rules", "dns") | yaml }}
 
 proxy-groups:
-- name: 🚀 节点选择
+# AI 专线: 走本节点 → 中转 → 客户专属住宅IP (RelayHub 会把节点名带上出口IP)
+- name: 🤖 AI 专线
   type: select
   proxies:
-  - ♻️ 自动选择
+  {{ proxy_remarks | yaml | indent(2) }}
+# 大流量: 直连大流量机场 (RelayHub 注入机场节点, 绕开本服务器)
+- name: 🚀 大流量
+  type: select
+  proxies:
   - DIRECT
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: ♻️ 自动选择
-  type: url-test
-  url: http://www.gstatic.com/generate_204
-  interval: 300
-  tolerance: 50
-  proxies:
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: 🤖 AI 服务
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - ♻️ 自动选择
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: 🌍 国外媒体
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - ♻️ 自动选择
-  - 🎯 全球直连
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: 📲 电报信息
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - 🎯 全球直连
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: Ⓜ️ 微软服务
-  type: select
-  proxies:
-  - 🎯 全球直连
-  - 🚀 节点选择
-  {{ proxy_remarks | yaml | indent(2) }}
-- name: 🍎 苹果服务
-  type: select
-  proxies:
-  - 🎯 全球直连
-  - 🚀 节点选择
-  {{ proxy_remarks | yaml | indent(2) }}
 - name: 🎯 全球直连
   type: select
   proxies:
   - DIRECT
-  - 🚀 节点选择
-  - ♻️ 自动选择
 - name: 🛑 全球拦截
   type: select
   proxies:
   - REJECT
   - DIRECT
-- name: 🐟 漏网之鱼
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - 🎯 全球直连
-  - ♻️ 自动选择
-  {{ proxy_remarks | yaml | indent(2) }}
 
 rules:
-# 管理服务器自身走直连 (开 TUN 时也能 SSH/管理面板; 部署到别处时改成对应 IP)
+# 管理服务器自身直连 (开 TUN 也能 SSH/面板; 部署他处改这个 IP)
 - IP-CIDR,23.252.105.218/32,🎯 全球直连,no-resolve
 # 局域网 / 私网直连
 - DOMAIN-SUFFIX,local,🎯 全球直连
@@ -95,117 +52,58 @@ rules:
 - DOMAIN-KEYWORD,admaster,🛑 全球拦截
 - DOMAIN-KEYWORD,adsage,🛑 全球拦截
 - DOMAIN-KEYWORD,adsmogo,🛑 全球拦截
-- DOMAIN-KEYWORD,adsserving,🛑 全球拦截
 - DOMAIN-KEYWORD,appsflyer,🛑 全球拦截
-- DOMAIN-KEYWORD,domob,🛑 全球拦截
 - DOMAIN-KEYWORD,umeng,🛑 全球拦截
 - DOMAIN-SUFFIX,doubleclick.net,🛑 全球拦截
 - DOMAIN-SUFFIX,googleadservices.com,🛑 全球拦截
-- DOMAIN-SUFFIX,googlesyndication.com,🛑 全球拦截
-- DOMAIN-SUFFIX,adnxs.com,🛑 全球拦截
-- DOMAIN-SUFFIX,cnzz.com,🛑 全球拦截
-# ===== AI 服务 -> 独立分组 (residential IP 跑 AI 最稳) =====
-- DOMAIN-KEYWORD,openai,🤖 AI 服务
-- DOMAIN-KEYWORD,chatgpt,🤖 AI 服务
-- DOMAIN-KEYWORD,claude,🤖 AI 服务
-- DOMAIN-KEYWORD,anthropic,🤖 AI 服务
-# OpenAI / ChatGPT / Sora
-- DOMAIN-SUFFIX,openai.com,🤖 AI 服务
-- DOMAIN-SUFFIX,chatgpt.com,🤖 AI 服务
-- DOMAIN-SUFFIX,oaistatic.com,🤖 AI 服务
-- DOMAIN-SUFFIX,oaiusercontent.com,🤖 AI 服务
-- DOMAIN-SUFFIX,openaiapi-site.azureedge.net,🤖 AI 服务
-- DOMAIN-SUFFIX,sora.com,🤖 AI 服务
-- DOMAIN-SUFFIX,ai.com,🤖 AI 服务
-- DOMAIN-SUFFIX,arkoselabs.com,🤖 AI 服务
-- DOMAIN-SUFFIX,challenges.cloudflare.com,🤖 AI 服务
-- DOMAIN-SUFFIX,featuregates.org,🤖 AI 服务
-- DOMAIN-SUFFIX,statsigapi.net,🤖 AI 服务
-- DOMAIN-SUFFIX,auth0.com,🤖 AI 服务
-- DOMAIN-SUFFIX,intercom.io,🤖 AI 服务
-- DOMAIN-SUFFIX,intercomcdn.com,🤖 AI 服务
-# Claude / Anthropic
-- DOMAIN-SUFFIX,claude.ai,🤖 AI 服务
-- DOMAIN-SUFFIX,claude.com,🤖 AI 服务
-- DOMAIN-SUFFIX,anthropic.com,🤖 AI 服务
-- DOMAIN-SUFFIX,claudeusercontent.com,🤖 AI 服务
-# Google Gemini / AI Studio
-- DOMAIN-SUFFIX,gemini.google.com,🤖 AI 服务
-- DOMAIN-SUFFIX,bard.google.com,🤖 AI 服务
-- DOMAIN-SUFFIX,aistudio.google.com,🤖 AI 服务
-- DOMAIN-SUFFIX,makersuite.google.com,🤖 AI 服务
-- DOMAIN-SUFFIX,generativelanguage.googleapis.com,🤖 AI 服务
-- DOMAIN-SUFFIX,ai.google.dev,🤖 AI 服务
-- DOMAIN-SUFFIX,deepmind.google,🤖 AI 服务
-- DOMAIN,notebooklm.google.com,🤖 AI 服务
-# xAI / Grok
-- DOMAIN-SUFFIX,x.ai,🤖 AI 服务
-- DOMAIN-SUFFIX,grok.com,🤖 AI 服务
-# Microsoft Copilot / GitHub Copilot
-- DOMAIN-SUFFIX,copilot.microsoft.com,🤖 AI 服务
-- DOMAIN-SUFFIX,githubcopilot.com,🤖 AI 服务
-- DOMAIN,copilot-proxy.githubusercontent.com,🤖 AI 服务
-# 其它 AI
-- DOMAIN-SUFFIX,perplexity.ai,🤖 AI 服务
-- DOMAIN-SUFFIX,mistral.ai,🤖 AI 服务
-- DOMAIN-SUFFIX,meta.ai,🤖 AI 服务
-- DOMAIN-SUFFIX,poe.com,🤖 AI 服务
-- DOMAIN-SUFFIX,midjourney.com,🤖 AI 服务
-- DOMAIN-SUFFIX,huggingface.co,🤖 AI 服务
-- DOMAIN-SUFFIX,groq.com,🤖 AI 服务
-- DOMAIN-SUFFIX,cursor.com,🤖 AI 服务
-- DOMAIN-SUFFIX,cursor.sh,🤖 AI 服务
-# 电报
-- DOMAIN-SUFFIX,t.me,📲 电报信息
-- DOMAIN-SUFFIX,telegram.org,📲 电报信息
-- DOMAIN-SUFFIX,telegram.me,📲 电报信息
-- DOMAIN-SUFFIX,telegra.ph,📲 电报信息
-- IP-CIDR,91.108.0.0/16,📲 电报信息,no-resolve
-- IP-CIDR,149.154.160.0/20,📲 电报信息,no-resolve
-# 国外社交/媒体 -> 代理
-- DOMAIN-KEYWORD,google,🚀 节点选择
-- DOMAIN-KEYWORD,youtube,🌍 国外媒体
-- DOMAIN-KEYWORD,facebook,🚀 节点选择
-- DOMAIN-KEYWORD,twitter,🚀 节点选择
-- DOMAIN-KEYWORD,instagram,🚀 节点选择
-- DOMAIN-KEYWORD,github,🚀 节点选择
-- DOMAIN-KEYWORD,whatsapp,🚀 节点选择
-- DOMAIN-SUFFIX,x.com,🚀 节点选择
-- DOMAIN-SUFFIX,reddit.com,🚀 节点选择
-- DOMAIN-SUFFIX,netflix.com,🌍 国外媒体
-- DOMAIN-SUFFIX,nflxvideo.net,🌍 国外媒体
-- DOMAIN-SUFFIX,disneyplus.com,🌍 国外媒体
-- DOMAIN-SUFFIX,spotify.com,🌍 国外媒体
-- DOMAIN-SUFFIX,twitch.tv,🌍 国外媒体
-- DOMAIN-SUFFIX,googlevideo.com,🌍 国外媒体
-- DOMAIN-SUFFIX,ytimg.com,🌍 国外媒体
-- DOMAIN-SUFFIX,wikipedia.org,🚀 节点选择
-- DOMAIN-SUFFIX,bbc.com,🚀 节点选择
-- DOMAIN-SUFFIX,discord.com,🚀 节点选择
-- DOMAIN-SUFFIX,docker.com,🚀 节点选择
-- DOMAIN-SUFFIX,docker.io,🚀 节点选择
-# 微软
-- DOMAIN-KEYWORD,microsoft,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,bing.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,live.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,office.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,windows.net,Ⓜ️ 微软服务
-# 苹果
-- DOMAIN-SUFFIX,apple.com,🍎 苹果服务
-- DOMAIN-SUFFIX,icloud.com,🍎 苹果服务
-- DOMAIN-SUFFIX,mzstatic.com,🍎 苹果服务
-# 国内常见直连 (兜底交给 GEOIP)
+# ===== AI 域名 -> AI 专线 (本节点 -> 住宅IP) =====
+- DOMAIN-KEYWORD,openai,🤖 AI 专线
+- DOMAIN-KEYWORD,chatgpt,🤖 AI 专线
+- DOMAIN-KEYWORD,claude,🤖 AI 专线
+- DOMAIN-KEYWORD,anthropic,🤖 AI 专线
+- DOMAIN-SUFFIX,openai.com,🤖 AI 专线
+- DOMAIN-SUFFIX,chatgpt.com,🤖 AI 专线
+- DOMAIN-SUFFIX,oaistatic.com,🤖 AI 专线
+- DOMAIN-SUFFIX,oaiusercontent.com,🤖 AI 专线
+- DOMAIN-SUFFIX,sora.com,🤖 AI 专线
+- DOMAIN-SUFFIX,arkoselabs.com,🤖 AI 专线
+- DOMAIN-SUFFIX,challenges.cloudflare.com,🤖 AI 专线
+- DOMAIN-SUFFIX,featuregates.org,🤖 AI 专线
+- DOMAIN-SUFFIX,statsigapi.net,🤖 AI 专线
+- DOMAIN-SUFFIX,auth0.com,🤖 AI 专线
+- DOMAIN-SUFFIX,intercom.io,🤖 AI 专线
+- DOMAIN-SUFFIX,intercomcdn.com,🤖 AI 专线
+- DOMAIN-SUFFIX,claude.ai,🤖 AI 专线
+- DOMAIN-SUFFIX,claude.com,🤖 AI 专线
+- DOMAIN-SUFFIX,anthropic.com,🤖 AI 专线
+- DOMAIN-SUFFIX,claudeusercontent.com,🤖 AI 专线
+- DOMAIN-SUFFIX,gemini.google.com,🤖 AI 专线
+- DOMAIN-SUFFIX,aistudio.google.com,🤖 AI 专线
+- DOMAIN-SUFFIX,makersuite.google.com,🤖 AI 专线
+- DOMAIN-SUFFIX,generativelanguage.googleapis.com,🤖 AI 专线
+- DOMAIN-SUFFIX,ai.google.dev,🤖 AI 专线
+- DOMAIN,notebooklm.google.com,🤖 AI 专线
+- DOMAIN-SUFFIX,x.ai,🤖 AI 专线
+- DOMAIN-SUFFIX,grok.com,🤖 AI 专线
+- DOMAIN-SUFFIX,copilot.microsoft.com,🤖 AI 专线
+- DOMAIN-SUFFIX,githubcopilot.com,🤖 AI 专线
+- DOMAIN-SUFFIX,perplexity.ai,🤖 AI 专线
+- DOMAIN-SUFFIX,mistral.ai,🤖 AI 专线
+- DOMAIN-SUFFIX,poe.com,🤖 AI 专线
+- DOMAIN-SUFFIX,huggingface.co,🤖 AI 专线
+- DOMAIN-SUFFIX,cursor.com,🤖 AI 专线
+- DOMAIN-SUFFIX,cursor.sh,🤖 AI 专线
+# 国内直连
 - DOMAIN-SUFFIX,cn,🎯 全球直连
 - DOMAIN-KEYWORD,baidu,🎯 全球直连
 - DOMAIN-KEYWORD,bilibili,🎯 全球直连
 - DOMAIN-KEYWORD,alicdn,🎯 全球直连
 - DOMAIN-KEYWORD,taobao,🎯 全球直连
 - DOMAIN-KEYWORD,tmall,🎯 全球直连
-- DOMAIN-KEYWORD,jd.com,🎯 全球直连
 - DOMAIN-KEYWORD,qq.com,🎯 全球直连
 - DOMAIN-KEYWORD,weixin,🎯 全球直连
 - DOMAIN-SUFFIX,bytedance.com,🎯 全球直连
 - DOMAIN-SUFFIX,douyin.com,🎯 全球直连
-# GEOIP 中国直连, 其余走代理
 - GEOIP,CN,🎯 全球直连
-- MATCH,🐟 漏网之鱼
+# 其余所有 -> 大流量机场 (直连机场, 不过本服务器)
+- MATCH,🚀 大流量

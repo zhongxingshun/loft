@@ -4,6 +4,7 @@ uvicorn[standard]>=0.29
 httpx[socks]>=0.27        # [socks] 供线路健康检查经 socks5 出站探活 (P5)
 pydantic>=2.6
 pydantic-settings>=2.2
+pyyaml>=6.0           # 订阅分流: 合并大流量机场节点
 
 # 开发/测试
 pytest>=8.0

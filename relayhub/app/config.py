@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # 订阅节点显示名模板 (Marzban host remark; 变量 {USERNAME}/{SERVER_IP} 等)
     sub_node_remark: str = "🚀 高速公路 {USERNAME}"
 
+    # 大流量机场订阅 (非AI流量直连它, 绕开本服务器省流量); 留空=不启用分流, 全走本节点
+    highvol_sub_url: str = ""
+
     # Marzban 的 xray email 形如 {id}.{username} (如 1.user1)。id 由 API 取不到,
     # 故路由 user 候选里枚举 {1..routing_id_range}.{username} 全覆盖 (用户名唯一, 不会误匹配)。
     # 系统生命周期内累计开通+删除用户数若可能超过此值, 调大它。
