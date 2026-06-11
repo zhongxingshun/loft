@@ -69,6 +69,15 @@ dns:
   fallback:
     - 8.8.8.8
     - 1.1.1.1
+    - https://dns.google/dns-query
+  # 防污染: 国内DNS若把某域名解析成"非中国IP/污染IP", 改用fallback(国外DNS)结果
+  # 这样 github/google 等被污染的域名能拿到真实IP, 不会被GEOIP误判成直连
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
 
 {{ conf | except("proxy-groups", "port", "mixed-port", "mode", "rules", "dns") | yaml }}
 
@@ -155,6 +164,39 @@ rules:
 # IP 检测站 -> 也走 AI 专线, 否则查到的是机场IP, 会误判
 - DOMAIN-SUFFIX,ping0.cc,🤖 AI 专线
 - DOMAIN-SUFFIX,net.coffee,🤖 AI 专线
+# 账号登录邮箱 -> 必须和 AI 同一住宅IP, 否则邮箱IP与Claude IP不一致易触发风控
+- DOMAIN-SUFFIX,mail.com,🤖 AI 专线
+# 国外开发/常用服务 -> 强制走机场 (这些域名国内DNS会污染, 不显式指定会被GEOIP误判成直连→打不开)
+- DOMAIN-SUFFIX,github.com,🚀 大流量
+- DOMAIN-SUFFIX,githubusercontent.com,🚀 大流量
+- DOMAIN-SUFFIX,githubassets.com,🚀 大流量
+- DOMAIN-SUFFIX,github.io,🚀 大流量
+- DOMAIN-SUFFIX,ghcr.io,🚀 大流量
+- DOMAIN-SUFFIX,gitlab.com,🚀 大流量
+- DOMAIN-SUFFIX,bitbucket.org,🚀 大流量
+- DOMAIN-SUFFIX,npmjs.org,🚀 大流量
+- DOMAIN-SUFFIX,npmjs.com,🚀 大流量
+- DOMAIN-SUFFIX,yarnpkg.com,🚀 大流量
+- DOMAIN-SUFFIX,pypi.org,🚀 大流量
+- DOMAIN-SUFFIX,pythonhosted.org,🚀 大流量
+- DOMAIN-SUFFIX,rubygems.org,🚀 大流量
+- DOMAIN-SUFFIX,crates.io,🚀 大流量
+- DOMAIN-SUFFIX,rust-lang.org,🚀 大流量
+- DOMAIN-SUFFIX,golang.org,🚀 大流量
+- DOMAIN-SUFFIX,go.dev,🚀 大流量
+- DOMAIN-SUFFIX,googlesource.com,🚀 大流量
+- DOMAIN-SUFFIX,docker.com,🚀 大流量
+- DOMAIN-SUFFIX,docker.io,🚀 大流量
+- DOMAIN-SUFFIX,gcr.io,🚀 大流量
+- DOMAIN-SUFFIX,k8s.io,🚀 大流量
+- DOMAIN-SUFFIX,quay.io,🚀 大流量
+- DOMAIN-SUFFIX,jsdelivr.net,🚀 大流量
+- DOMAIN-SUFFIX,unpkg.com,🚀 大流量
+- DOMAIN-SUFFIX,cloudflare.com,🚀 大流量
+- DOMAIN-SUFFIX,nuget.org,🚀 大流量
+- DOMAIN-SUFFIX,packagist.org,🚀 大流量
+- DOMAIN-SUFFIX,maven.org,🚀 大流量
+- DOMAIN-SUFFIX,gradle.org,🚀 大流量
 # 微信/腾讯 -> 直连 (发图/语音用 qpic/tc.qq.com, 强制直连防绕路卡顿)
 - DOMAIN-KEYWORD,wechat,🎯 全球直连
 - DOMAIN-KEYWORD,weixin,🎯 全球直连
