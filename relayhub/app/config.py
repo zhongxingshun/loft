@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # 大流量机场订阅 (非AI流量直连它, 绕开本服务器省流量); 留空=不启用分流, 全走本节点
     highvol_sub_url: str = ""
 
+    # vmess 入站 tag (兼容只支持 vmess 的客户端; 经 Cloudflare CDN)。
+    # 留空=不开 vmess, 只发 VLESS-Reality。设为 VMESS_WS 则每个客户额外多一个 vmess 节点。
+    vmess_inbound_tag: str = ""
+
     # Marzban 的 xray email 形如 {id}.{username} (如 1.user1)。id 由 API 取不到,
     # 故路由 user 候选里枚举 {1..routing_id_range}.{username} 全覆盖 (用户名唯一, 不会误匹配)。
     # 系统生命周期内累计开通+删除用户数若可能超过此值, 调大它。

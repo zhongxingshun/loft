@@ -16,3 +16,16 @@
 	tls /certs/marzban.crt /certs/marzban.key
 	reverse_proxy relayhub:8080
 }
+
+# vmess + WebSocket 入站 (经 Cloudflare CDN, 端口 2053)。
+# CF 边缘对客户端用真证书; 源站自签 (CF SSL 模式设 Full 即放行)。
+# 只放行 WS 路径 /loftvm 反代到 Xray vmess 入站, 其余 404 伪装。
+:2053 {
+	tls /certs/marzban.crt /certs/marzban.key
+	handle /loftvm {
+		reverse_proxy marzban:2002
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}

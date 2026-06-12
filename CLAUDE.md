@@ -42,6 +42,21 @@ ISP IP **中转/转售**服务:买静态住宅 ISP(decode/Decodo SOCKS5)出口,�
 - ⚠️ **出口 IP 由服务器端 SOCKS5 出站(`isp.decodo.com:端口`)决定,与客户端 clash 规则无关**。Decodo ISP 产品一个端口 = 一个固定住宅 IP(实测 12/12 稳定,**不轮换**)。
 - ⚠️ 改模板**必须重启** marzban 才生效(已验证:不重启拉订阅看不到改动)。
 
+## vmess + Cloudflare CDN(兼容 vmess-only 客户端 / 抗封锁)
+
+为兼容只支持 vmess 的客户端,额外开了一条 **vmess + WebSocket + TLS,经 Cloudflare CDN** 的线(与 Reality 并存,出口同样走客户专属 ISP)。
+
+链路:`vmess客户端 → loft.apibiubiu.com:2053 (CF边缘TLS) → Cloudflare CDN(藏真实IP) → 源站 23.252.105.218:2053 (Caddy自签TLS) → /loftvm WS反代 → Xray VMESS_WS入站(:2002) → 按邮箱路由 → 客户ISP`
+
+关键配置(部分不在 git 里,记这):
+- **Xray 入站**:`deploy/xray_config.json` 加了 `VMESS_WS`(vmess/ws,`listen 0.0.0.0:2002`,`path=/loftvm`,无TLS)。**含 Reality 私钥,不入库**。
+- **Caddy**:`:2053` 块,复用自签证书 `marzban.crt`,`handle /loftvm → reverse_proxy marzban:2002`,其余 404 伪装。compose 开放 `2053:2053`。
+- **Cloudflare**:`loft.apibiubiu.com` A记录→`23.252.105.218`,**橙云代理**;SSL/TLS 模式必须 **Full**(不是 Flexible/Full strict)。用 2053(CF 支持的 HTTPS 端口),**443 留给 Reality**。
+- **Marzban host**:`VMESS_WS` host 设为 `address=loft.apibiubiu.com, port=2053, path=/loftvm, security=tls, sni/host=loft.apibiubiu.com, fingerprint=chrome`(否则订阅生成的 vmess 节点指向源站IP而非CDN)。
+- **RelayHub**:`vmess_inbound_tag=VMESS_WS`(env `VMESS_INBOUND_TAG`)→ 开通时自动给客户加 vmess 入站。留空=只发 Reality。
+- 每客户订阅里因此有**两个本节点**:Reality 一个、vmess(CDN)一个,都在 🤖 AI 专线 组,出口同一 ISP。
+- ⚠️ 给**老客户**补 vmess 需重新开通(会刷新 created_at → 旧订阅链接失效,要重发);**新客户自动带**。
+
 ## 路由机制(RelayHub)
 
 - Marzban 的 xray email = `{id}.{username}`(如 `1.jeffrey10001`),API 取不到 id → 路由 user 候选枚举 `{1..routing_id_range}.{name}` 全覆盖(`routing_id_range=1000`)。

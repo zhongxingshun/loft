@@ -156,10 +156,15 @@ class ProvisioningService:
                    existing_id: str | None = None) -> dict:
         proto = self.s.shared_inbound_protocol
         expire = 0 if spec.days == 0 else int(time.time()) + spec.days * 86400
+        proxies = {proto: ({"id": existing_id} if existing_id else {})}
+        inbounds = {proto: [self.s.shared_inbound_tag]}
+        if self.s.vmess_inbound_tag:                       # 额外开 vmess (CDN, 兼容 vmess-only 客户端)
+            proxies["vmess"] = {"id": existing_id} if existing_id else {}
+            inbounds["vmess"] = [self.s.vmess_inbound_tag]
         body = {
             "username": spec.name,
-            "proxies": {proto: ({"id": existing_id} if existing_id else {})},
-            "inbounds": {proto: [self.s.shared_inbound_tag]},
+            "proxies": proxies,
+            "inbounds": inbounds,
             "expire": expire,
             "data_limit": int(spec.gb * _GB),
             "data_limit_reset_strategy": "no_reset",

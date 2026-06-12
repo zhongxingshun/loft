@@ -63,6 +63,7 @@ services:
       RELAYHUB_PANEL_USER: ${RELAYHUB_PANEL_USER:-admin}
       RELAYHUB_PANEL_PASSWORD: ${RELAYHUB_PANEL_PASSWORD:-}   # 公网开放必配, 否则只走隧道
       RELAYHUB_HIGHVOL_SUB_URL: ${HIGHVOL_SUB_URL:-}          # 大流量机场订阅 (分流: 非AI走它)
+      RELAYHUB_VMESS_INBOUND_TAG: ${VMESS_INBOUND_TAG:-}      # vmess 入站 tag (兼容vmess客户端, 经CDN); 空=不开
     ports:
       - "127.0.0.1:8080:8080"           # RelayHub 面板, 仅本地 (公网经 Caddy :8443)
 
@@ -79,6 +80,7 @@ services:
     ports:
       - "80:80"                          # 订阅入口 (公网)
       - "8443:8443"                      # RelayHub 面板入口 (公网, TLS+鉴权)
+      - "2053:2053"                      # vmess+WS 入口 (经 Cloudflare CDN)
 
 volumes:
   marzban_data:
